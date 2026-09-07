@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_backend
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secret}
+      POSTGRES_DB: ${DATABASE_NAME:-db}
+    ports:
+      - '${DATABASE_PORT:-5432}:5432'
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+
+volumes:
+  pgdata_local:

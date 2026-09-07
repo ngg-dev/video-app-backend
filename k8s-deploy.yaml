@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nestjs-backend
+spec:
+  replicas: 1 # Просим K8s запустить ровно 1 копию приложения
+  selector:
+    matchLabels:
+      app: nestjs-app
+  template:
+    metadata:
+      labels:
+        app: nestjs-app
+    spec:
+      containers:
+        - name: nestjs-container
+          image: backend:v1 # Имя вашего докер-образа из команды docker build
+          imagePullPolicy: Never # Важно: заставит K8s брать локальный образ из k3d
+          ports:
+            - containerPort: 3000 # Порт, который NestJS слушает внутри контейнера
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nestjs-service
+spec:
+  selector:
+    app: nestjs-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000 # Перенаправляем внутренний трафик на порт 3000 нашего NestJS
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nestjs-ingress
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: 'false'
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nestjs-service
+                port:
+                  number: 80
