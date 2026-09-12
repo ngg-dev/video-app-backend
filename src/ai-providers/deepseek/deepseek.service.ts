@@ -5,6 +5,7 @@ import { generateText } from 'ai';
 import { deepSeekModels } from 'src/shared/constants/deepseek';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
+import { GenerateParams } from './types/deepseek.types';
 
 @LogMethods()
 @Injectable()
@@ -17,13 +18,7 @@ export class DeepSeekService {
     });
   }
 
-  async generate({
-    model = deepSeekModels.v4Pro,
-    prompt,
-  }: {
-    model?: string;
-    prompt: string;
-  }) {
+  async generate({ model = deepSeekModels.v4Pro, prompt }: GenerateParams) {
     const result = await this.logger.trackExternalCall(
       {
         provider: 'deepseek',

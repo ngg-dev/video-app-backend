@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { createXai, XaiProvider } from '@ai-sdk/xai';
-import { generateText } from 'ai';
+import { createXai, xai, XaiProvider } from '@ai-sdk/xai';
+import { GeneratedFile, generateImage, generateText } from 'ai';
 import { XAI_API_KEY } from '../../shared/constants/config';
 import { xaiModels } from '../../shared/constants/xai';
 import { AppLoggerService } from '../../shared/logger/logger.service';
 import { LogMethods } from '../../shared/logger/log-methods.decorator';
+import { GenerateImageParams, GenerateParams } from './types/xai.types';
 
 @LogMethods()
 @Injectable()
@@ -20,10 +21,7 @@ export class XaiService {
   async generate({
     model = xaiModels.grok4,
     prompt,
-  }: {
-    model?: string;
-    prompt: string;
-  }) {
+  }: GenerateParams): Promise<string | null> {
     const result = await this.logger.trackExternalCall(
       {
         provider: 'xai',
@@ -42,6 +40,38 @@ export class XaiService {
       }),
     );
 
-    return result.text || '';
+    return result.text || null;
+  }
+
+  async generateImage({
+    model = xaiModels.grok4,
+    prompt,
+    referenceImages,
+    aspectRatio,
+  }: GenerateImageParams): Promise<GeneratedFile | null> {
+    const hasReferenceImages = !!referenceImages?.length;
+
+    const { image } = await this.logger.trackExternalCall(
+      {
+        provider: 'xai',
+        operation: 'generateImage',
+        request: {
+          model,
+          promptLength: prompt.length,
+          prompt,
+          referenceImagesCount: referenceImages?.length ?? 0,
+        },
+      },
+      () =>
+        generateImage({
+          model: xai.image('grok-imagine-image-2.0'),
+          prompt: hasReferenceImages
+            ? { text: prompt, images: referenceImages }
+            : prompt,
+          ...(aspectRatio ? { aspectRatio } : {}),
+        }),
+    );
+
+    return image || null;
   }
 }

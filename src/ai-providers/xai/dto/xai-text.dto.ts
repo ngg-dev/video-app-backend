@@ -1,13 +1,13 @@
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
-export class GenerateRequestDto {
+export class GenerateTextRequestDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100_000)
   prompt!: string;
 }
 
-export class GenerateResponsetDto {
+export class GenerateTextResponseDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100_000)

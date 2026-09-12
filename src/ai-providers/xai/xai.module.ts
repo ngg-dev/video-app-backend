@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { XaiController } from './xai.controller';
+import { XaiTextController } from './xai-text.controller';
+import { XaiImageController } from './xai-image.controller';
 import { XaiService } from './xai.service';
 
 @Module({
-  controllers: [XaiController],
+  controllers: [XaiTextController, XaiImageController],
   providers: [XaiService],
   exports: [XaiService],
 })

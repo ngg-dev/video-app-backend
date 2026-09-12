@@ -1,18 +1,21 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { XaiService } from './xai.service';
-import { GenerateRequestDto, GenerateResponsetDto } from './dto/xai.dto';
+import {
+  GenerateTextRequestDto,
+  GenerateTextResponseDto,
+} from './dto/xai-text.dto';
 
-@Controller('xai')
-export class XaiController {
+@Controller('xai/text')
+export class XaiTextController {
   constructor(private readonly xaiService: XaiService) {}
 
   @Post('generate')
   async generate(
-    @Body() body: GenerateRequestDto,
-  ): Promise<GenerateResponsetDto> {
+    @Body() body: GenerateTextRequestDto,
+  ): Promise<GenerateTextResponseDto> {
     const message = await this.xaiService.generate({
       prompt: body.prompt,
     });
-    return { message };
+    return { message: message ?? '' };
   }
 }
