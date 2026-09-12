@@ -1,13 +1,78 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm test)",
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(npm test*)",
+      "Bash(npm run test*)",
+      "Bash(npm run lint*)",
       "Bash(npm lint)",
+      "Bash(npm run build*)",
+      "Bash(npm run typecheck*)",
+      "Bash(yarn test*)",
+      "Bash(yarn lint*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm lint*)",
+      "Bash(git status*)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Bash(ls *)"
+      "Bash(git show *)",
+      "Bash(git branch*)",
+      "Bash(git blame *)",
+      "Bash(git stash list*)",
+      "Bash(git fetch*)",
+      "Bash(ls *)",
+      "Bash(pwd)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(which *)",
+      "Bash(cat *)"
     ],
-    "deny": ["Bash(git push *)", "Read(.env*)"],
-    "ask": []
+    "deny": [
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git branch -D*)",
+      "Bash(git checkout -- *)",
+      "Bash(rm -rf*)",
+      "Bash(sudo *)",
+      "Bash(chmod 777*)",
+      "Bash(curl * | sh*)",
+      "Bash(curl * | bash*)",
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa*)",
+      "Read(**/credentials*)",
+      "Read(**/secrets*)",
+      "Read(**/.aws/**)",
+      "Read(**/.ssh/**)",
+      "Edit(.env*)",
+      "Edit(**/.env*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git commit*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git checkout*)",
+      "Bash(git reset*)",
+      "Bash(npm install*)",
+      "Bash(npm uninstall*)",
+      "Bash(npm ci*)",
+      "Bash(yarn add*)",
+      "Bash(yarn remove*)",
+      "Bash(pnpm add*)",
+      "Bash(pnpm remove*)"
+    ]
+  },
+  "enabledPlugins": {
+    "mattpocock-skills@claude-plugins-official": true
   }
 }

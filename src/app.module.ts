@@ -4,6 +4,11 @@ import { AppService } from './app.service';
 import { DeepSeekModule } from './ai-providers/deepseek/deepseek.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { GenerationItemModule } from './generations/generation-item/generation-item.module';
+import { RedisModule } from './database/redis/redis.module';
+import { XaiModule } from './xai/xai.module';
+import { XaiModule } from './xai/xai.module';
+import { XaiModule } from './xai/xai.module';
 
 @Module({
   imports: [
@@ -22,6 +27,9 @@ import { ConfigModule } from '@nestjs/config';
       verboseRetryLog: true,
     }),
     DeepSeekModule,
+    GenerationItemModule,
+    RedisModule,
+    XaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
