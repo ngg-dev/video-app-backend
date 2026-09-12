@@ -24,20 +24,22 @@
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^3.0.39",
+    "@ai-sdk/xai": "^4.0.58",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^12.0.1",
-    "ai": "^7.0.93",
+    "ai": "^7.0.99",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.31"
+    "typeorm": "^0.3.31",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

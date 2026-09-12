@@ -5,5 +5,6 @@ import { XaiService } from './xai.service';
 @Module({
   controllers: [XaiController],
   providers: [XaiService],
+  exports: [XaiService],
 })
 export class XaiModule {}
