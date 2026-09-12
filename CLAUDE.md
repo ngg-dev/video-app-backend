@@ -29,6 +29,10 @@ NestJS + TypeORM (Postgres) app, currently early-stage/scaffolded.
 - `src/generations/generation-item/` models a generation job: `GenerationItem` entity has a `status` enum (`GenereationItemStatus` in `src/shared/constants/generation-item.ts`: `PENDING`, `RUNNING`, `FAILED`, `COMPLETED`, `WAITING_START` — note the enum name's typo, keep it consistent rather than silently "fixing" it). Shared cross-cutting constants/enums go in `src/shared/constants/`, not inline in entities/services.
 - Path imports use the `src/...` absolute form (baseUrl is repo root) alongside relative imports (`../../../shared/...`) in different files — no strict convention has been established yet, follow whichever style the file you're editing already uses.
 
+## Logging
+
+The app has a DI-injectable `AppLoggerService` (extends Nest's `ConsoleLogger`) in `src/shared/logger/`, wired globally via `LoggerModule` (HTTP interceptor + exception filter). New first-party services should be annotated with `@LogMethods()` (from `src/shared/logger/log-methods.decorator.ts`) to get automatic method-call logging. Any new outgoing client call should be wrapped in `AppLoggerService.trackExternalCall(...)`, mirroring `DeepSeekService.generate`. Logger constants/config live in `src/shared/constants/logger.ts` (and `LOG_LEVEL`/`LOG_PAYLOADS` in `config.ts`) — don't read `process.env` directly in logger code.
+
 ## Notes
 
 - `AppModule` currently imports `GenerationAttemptModule` from `./generation-attempt/generation-attempt.module`, but no such module exists under `src/`; the only generation-related module present is `GenerationItemModule` under `src/generations/generation-item/`, one directory level deeper than the import paths in `app.module.ts` expect. The app will not compile until this is resolved.

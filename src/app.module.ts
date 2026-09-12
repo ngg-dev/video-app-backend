@@ -6,13 +6,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { GenerationItemModule } from './generations/generation-item/generation-item.module';
 import { RedisModule } from './database/redis/redis.module';
-import { XaiModule } from './xai/xai.module';
+import { XaiModule } from './ai-providers/xai/xai.module';
 import { CreateVideoModule } from './create-video/create-video.module';
-import { XaiModule } from './xai/xai.module';
-import { XaiModule } from './xai/xai.module';
+import { LoggerModule } from './shared/logger/logger.module';
 
 @Module({
   imports: [
+    LoggerModule,
     ConfigModule.forRoot({
       isGlobal: true, // Makes the ConfigService available across all your modules
     }),
