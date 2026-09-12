@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GenerationItemModule } from './generations/generation-item/generation-item.module';
 import { RedisModule } from './database/redis/redis.module';
 import { XaiModule } from './xai/xai.module';
+import { CreateVideoModule } from './create-video/create-video.module';
 import { XaiModule } from './xai/xai.module';
 import { XaiModule } from './xai/xai.module';
 
@@ -30,6 +31,7 @@ import { XaiModule } from './xai/xai.module';
     GenerationItemModule,
     RedisModule,
     XaiModule,
+    CreateVideoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
