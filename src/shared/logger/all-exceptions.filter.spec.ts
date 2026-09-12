@@ -1,4 +1,9 @@
-import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { AppLoggerService } from './logger.service';
 
@@ -42,6 +47,26 @@ describe('AllExceptionsFilter', () => {
       expect.objectContaining({
         statusCode: HttpStatus.BAD_REQUEST,
         message: 'Bad input',
+        path: '/things',
+      }),
+    );
+  });
+
+  it('preserves per-field validation messages from BadRequestException', () => {
+    const { host, status, json } = createHost();
+    const exception = new BadRequestException([
+      'name must be a string',
+      'age must be a number',
+    ]);
+
+    filter.catch(exception, host);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: ['name must be a string', 'age must be a number'],
         path: '/things',
       }),
     );

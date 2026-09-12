@@ -10,9 +10,26 @@ import { AppLoggerService } from './logger.service';
 
 interface ErrorResponseBody {
   statusCode: number;
-  message: string;
+  message: string | string[];
   path: string;
   timestamp: string;
+}
+
+function extractHttpExceptionMessage(
+  exception: HttpException,
+): string | string[] {
+  const response = exception.getResponse();
+  if (
+    typeof response === 'object' &&
+    response !== null &&
+    'message' in response
+  ) {
+    const { message } = response;
+    if (typeof message === 'string' || Array.isArray(message)) {
+      return message;
+    }
+  }
+  return exception.message;
 }
 
 @Catch()
@@ -29,7 +46,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
     const message = isHttpException
-      ? exception.message
+      ? extractHttpExceptionMessage(exception)
       : 'Internal server error';
 
     const body: ErrorResponseBody = {

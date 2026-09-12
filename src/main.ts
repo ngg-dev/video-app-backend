@@ -1,15 +1,16 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { LogLevel, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AppLoggerService } from './shared/logger/logger.service';
-import { LOG_EVENT, resolveLogLevels } from './shared/constants/logger';
-import { LOG_LEVEL } from './shared/constants/config';
+import { LOG_EVENT } from './shared/constants/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // AppLoggerService applies the configured LOG_LEVEL in its own
+  // constructor, so every transient instance (including this one) already
+  // has the right levels set.
   const logger = await app.resolve(AppLoggerService);
-  logger.setLogLevels(resolveLogLevels(LOG_LEVEL as LogLevel));
   app.useLogger(logger);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 

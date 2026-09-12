@@ -1,6 +1,6 @@
-import { ConsoleLogger, Injectable, Scope } from '@nestjs/common';
-import { LOG_EVENT } from '../constants/logger';
-import { LOG_PAYLOADS } from '../constants/config';
+import { ConsoleLogger, Injectable, LogLevel, Scope } from '@nestjs/common';
+import { LOG_EVENT, resolveLogLevels } from '../constants/logger';
+import { LOG_LEVEL, LOG_PAYLOADS } from '../constants/config';
 import { sanitizeForLog } from './sanitize';
 
 export interface HttpRequestLogMeta {
@@ -30,6 +30,15 @@ export interface ExternalCallMeta {
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class AppLoggerService extends ConsoleLogger {
+  constructor() {
+    super();
+    // TRANSIENT scope means every injection point gets its own ConsoleLogger
+    // instance with Nest's default log levels; apply the configured levels
+    // here so LOG_LEVEL is respected everywhere, not just on the single
+    // instance resolved via `app.get`/`app.resolve` in main.ts.
+    this.setLogLevels(resolveLogLevels(LOG_LEVEL as LogLevel));
+  }
+
   private payload(value: unknown): unknown {
     if (!LOG_PAYLOADS) {
       return undefined;
