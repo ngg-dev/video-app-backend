@@ -14,3 +14,10 @@ export const LOG_PAYLOADS =
   process.env.LOG_PAYLOADS !== undefined
     ? process.env.LOG_PAYLOADS === 'true'
     : NODE_ENV !== 'production';
+
+export const AWS_KEY_ID = process.env.AWS_KEY_ID ?? '';
+export const AWS_SECRET_KEY = process.env.AWS_SECRET_KEY ?? '';
+export const BUCKET_NAME = process.env.BUCKET_NAME ?? '';
+export const STORAGE_REGION = process.env.STORAGE_REGION ?? 'ru-central1';
+export const STORAGE_ENDPOINT =
+  process.env.STORAGE_ENDPOINT ?? 'https://storage.yandexcloud.net';

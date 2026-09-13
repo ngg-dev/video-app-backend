@@ -10,6 +10,7 @@ import { XaiModule } from './ai-providers/xai/xai.module';
 import { CreateVideoModule } from './create-video/create-video.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { CharacterGalleryModule } from './character-gallery/character-gallery.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CharacterGalleryModule } from './character-gallery/character-gallery.mo
     XaiModule,
     CreateVideoModule,
     CharacterGalleryModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
