@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { GenereationItemStatus } from '../../../shared/constants/generation-item';
+import { GenereationItemStatus } from 'src/shared/constants/generation-item';
 
 @Entity('generation_items')
 export class GenerationItemEntity {

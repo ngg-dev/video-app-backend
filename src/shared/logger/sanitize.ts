@@ -4,7 +4,7 @@ import {
   LOG_MAX_STRING_LENGTH,
   LOG_REDACTED_KEYS,
   LOG_REDACTED_PLACEHOLDER,
-} from '../constants/logger';
+} from 'src/shared/constants/logger';
 
 const REDACTED_KEYS_LOWER = LOG_REDACTED_KEYS.map((key) => key.toLowerCase());
 

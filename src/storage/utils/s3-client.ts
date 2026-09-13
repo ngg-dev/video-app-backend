@@ -4,7 +4,7 @@ import {
   STORAGE_ENDPOINT,
   STORAGE_ACCESS_KEY,
   STORAGE_SECRET_KEY,
-} from '../constants/storage.constants';
+} from 'src/storage/constants/storage.constants';
 
 export const S3_CLIENT = Symbol('S3_CLIENT');
 

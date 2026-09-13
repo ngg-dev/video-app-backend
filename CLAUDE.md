@@ -7,14 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run start:dev      # run with watch mode
 npm run build          # nest build
-npm run lint           # eslint --fix
-npm run lint:check     # eslint, no autofix
+npm run lint           # eslint, no autofix
+npm run lint:fix       # eslint --fix
+npm run format         # prettier --write
+npm run format:check   # prettier --check
 npm run typecheck      # tsc --noEmit
+npm run compile:test   # tsc --noEmit -p tsconfig.build.json — verifies the production build compiles, without emitting
 npm test               # jest unit tests (*.spec.ts, rootDir: src)
 npm run test:watch
 npm run test:cov
 npm run test:e2e       # jest -c test/jest-e2e.json
-npm run verify         # lint:check + typecheck + test — run this before considering a change done
+npm run verify         # lint + typecheck + test — run this before considering a change done
 ```
 
 Run a single test file: `npx jest path/to/file.spec.ts`. Run a single test case: `npx jest path/to/file.spec.ts -t "test name"`.

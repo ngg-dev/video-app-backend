@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GenerationItemEntity } from './entities/generation-item.entity';
 import { Repository } from 'typeorm';
 import { CreateGenerationItemDto } from './dto/create-generation-item.dto';
-import { LogMethods } from '../../shared/logger/log-methods.decorator';
+import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 
 @LogMethods()
 @Injectable()

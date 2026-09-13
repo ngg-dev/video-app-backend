@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { createXai, xai, XaiProvider } from '@ai-sdk/xai';
 import { GeneratedFile, generateImage, generateText } from 'ai';
-import { XAI_API_KEY } from '../../shared/constants/config';
-import { xaiModels } from '../../shared/constants/xai';
-import { AppLoggerService } from '../../shared/logger/logger.service';
-import { LogMethods } from '../../shared/logger/log-methods.decorator';
+import { XAI_API_KEY } from 'src/shared/constants/config';
+import { xaiModels } from 'src/shared/constants/xai';
+import { AppLoggerService } from 'src/shared/logger/logger.service';
+import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { GenerateImageParams, GenerateParams } from './types/xai.types';
 
 @LogMethods()

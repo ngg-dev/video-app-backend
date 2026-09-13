@@ -1,6 +1,6 @@
 import { ConsoleLogger, Injectable, LogLevel, Scope } from '@nestjs/common';
-import { LOG_EVENT, resolveLogLevels } from '../constants/logger';
-import { LOG_LEVEL, LOG_PAYLOADS } from '../constants/config';
+import { LOG_EVENT, resolveLogLevels } from 'src/shared/constants/logger';
+import { LOG_LEVEL, LOG_PAYLOADS } from 'src/shared/constants/config';
 import { sanitizeForLog } from './sanitize';
 
 export interface HttpRequestLogMeta {

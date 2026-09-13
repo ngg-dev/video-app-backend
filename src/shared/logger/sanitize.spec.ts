@@ -2,7 +2,7 @@ import { sanitizeForLog } from './sanitize';
 import {
   LOG_MAX_STRING_LENGTH,
   LOG_REDACTED_PLACEHOLDER,
-} from '../constants/logger';
+} from 'src/shared/constants/logger';
 
 describe('sanitizeForLog', () => {
   it('truncates strings longer than LOG_MAX_STRING_LENGTH', () => {
