@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { XaiModule } from 'src/ai-providers/xai/xai.module';
+import { StorageModule } from 'src/storage/storage.module';
 import { CharacterGalleryController } from './character-gallery.controller';
 import { CharacterGalleryService } from './character-gallery.service';
 import { CharacterItemEntity } from './entities/character-item.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CharacterItemEntity]), XaiModule],
+  imports: [
+    TypeOrmModule.forFeature([CharacterItemEntity]),
+    XaiModule,
+    StorageModule,
+  ],
   controllers: [CharacterGalleryController],
   providers: [CharacterGalleryService],
 })
