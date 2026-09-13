@@ -9,6 +9,7 @@ import { RedisModule } from './database/redis/redis.module';
 import { XaiModule } from './ai-providers/xai/xai.module';
 import { CreateVideoModule } from './create-video/create-video.module';
 import { LoggerModule } from './shared/logger/logger.module';
+import { CharacterGalleryModule } from './character-gallery/character-gallery.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { LoggerModule } from './shared/logger/logger.module';
     RedisModule,
     XaiModule,
     CreateVideoModule,
+    CharacterGalleryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
