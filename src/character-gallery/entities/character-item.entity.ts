@@ -23,6 +23,9 @@ export class CharacterItemEntity {
   @Column({ type: 'varchar', nullable: true })
   style!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  collection!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
