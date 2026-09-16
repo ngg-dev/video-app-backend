@@ -5,4 +5,7 @@ export class CreateRequestDto {
   @IsNotEmpty()
   @MaxLength(100_000)
   scenario!: string;
+
+  @IsString()
+  collectionId!: string;
 }

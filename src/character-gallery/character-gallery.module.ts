@@ -4,11 +4,17 @@ import { XaiModule } from 'src/ai-providers/xai/xai.module';
 import { StorageModule } from 'src/storage/storage.module';
 import { CharacterGalleryController } from './character-gallery.controller';
 import { CharacterGalleryService } from './character-gallery.service';
-import { CharacterItemEntity } from './entities/character-item.entity';
+import {
+  CharacterCollectionItemEntity,
+  CharacterItemEntity,
+} from './entities/character-item.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CharacterItemEntity]),
+    TypeOrmModule.forFeature([
+      CharacterItemEntity,
+      CharacterCollectionItemEntity,
+    ]),
     XaiModule,
     StorageModule,
   ],

@@ -15,4 +15,8 @@ export class CreateCharacterDto {
   @IsString()
   @MaxLength(255)
   style?: string;
+
+  @IsOptional()
+  @IsString()
+  collectionId?: string;
 }

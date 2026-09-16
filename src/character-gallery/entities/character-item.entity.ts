@@ -14,8 +14,8 @@ export class CharacterItemEntity {
   @Column({ type: 'varchar' })
   name!: string;
 
-  @Column({ type: 'text', array: true, default: '{}' })
-  imageUrls!: string[];
+  @Column({ type: 'text', nullable: true })
+  imageUrl!: string | null;
 
   @Column({ type: 'text', nullable: true })
   description!: string | null;
@@ -24,7 +24,25 @@ export class CharacterItemEntity {
   style!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  collection!: string | null;
+  collectionId!: string | null;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
+@Entity('character_collection_items')
+export class CharacterCollectionItemEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'varchar' })
+  title!: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  style!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;
