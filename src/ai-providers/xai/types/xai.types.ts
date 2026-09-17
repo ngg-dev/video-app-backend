@@ -13,3 +13,10 @@ export interface GenerateImageParams {
   referenceImages?: DataContent[];
   aspectRatio?: AspectRatio;
 }
+
+export interface GenerateVideoParams {
+  model?: string;
+  prompt: string;
+  referenceImageUrls: string[];
+  resolution?: '480p' | '720p' | '1080p';
+}

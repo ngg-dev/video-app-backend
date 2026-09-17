@@ -9,3 +9,8 @@ export class CreateRequestDto {
   @IsString()
   collectionId!: string;
 }
+
+export class CreateVideoResponseDto {
+  sceneImageUrl!: string;
+  sceneVideoUrl!: string;
+}

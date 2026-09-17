@@ -1,11 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { createXai, xai, XaiProvider } from '@ai-sdk/xai';
-import { GeneratedFile, generateImage, generateText } from 'ai';
+import {
+  experimental_generateVideo as generateVideo,
+  GeneratedFile,
+  generateImage,
+  generateText,
+} from 'ai';
 import { XAI_API_KEY } from 'src/shared/constants/config';
-import { xaiModels } from 'src/shared/constants/xai';
+import { xaiModels, xaiVideoModels } from 'src/shared/constants/xai';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { GenerateImageParams, GenerateParams } from './types/xai.types';
+import {
+  GenerateImageParams,
+  GenerateParams,
+  GenerateVideoParams,
+} from './types/xai.types';
 
 @LogMethods()
 @Injectable()
@@ -73,5 +82,39 @@ export class XaiService {
     );
 
     return image || null;
+  }
+
+  async generateVideo({
+    model = xaiVideoModels.grokImagineVideo15,
+    prompt,
+    referenceImageUrls,
+    resolution,
+  }: GenerateVideoParams): Promise<GeneratedFile | null> {
+    const { video } = await this.logger.trackExternalCall(
+      {
+        provider: 'xai',
+        operation: 'generateVideo',
+        request: {
+          model,
+          promptLength: prompt.length,
+          prompt,
+          referenceImagesCount: referenceImageUrls.length,
+        },
+      },
+      () =>
+        generateVideo({
+          model: this.xaiSource.video(model),
+          prompt,
+          providerOptions: {
+            xai: {
+              mode: 'reference-to-video',
+              referenceImageUrls,
+              ...(resolution ? { resolution } : {}),
+            },
+          },
+        }),
+    );
+
+    return video || null;
   }
 }

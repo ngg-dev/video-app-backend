@@ -2,11 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GeneratedFile } from 'ai';
-import { CreateRequestDto } from './dto/create-video.dto';
+import {
+  CreateRequestDto,
+  CreateVideoResponseDto,
+} from './dto/create-video.dto';
 import { DeepSeekService } from 'src/ai-providers/deepseek/deepseek.service';
 import { XaiService } from 'src/ai-providers/xai/xai.service';
 import { StorageService } from 'src/storage/storage.service';
-import { SCENE_IMAGE_PROMPT_INSTRUCTIONS } from './constants/scene-prompt.constant';
+import {
+  SCENE_IMAGE_PROMPT_INSTRUCTIONS,
+  SCENE_VIDEO_PROMPT_INSTRUCTIONS,
+} from './constants/scene-prompt.constant';
 import { Repository } from 'typeorm';
 import {
   CharacterCollectionItemEntity,
@@ -25,7 +31,9 @@ export class CreateVideoService {
     private readonly characterItemRepository: Repository<CharacterItemEntity>,
   ) {}
 
-  async createVideoPipe(data: CreateRequestDto): Promise<string> {
+  async createVideoPipe(
+    data: CreateRequestDto,
+  ): Promise<CreateVideoResponseDto> {
     const scenario = data?.scenario.toLowerCase();
     const collectionId = data?.collectionId;
 
@@ -60,7 +68,34 @@ export class CreateVideoService {
       throw new InternalServerErrorException('Scene image generation failed.');
     }
 
-    return this.uploadSceneImage(sceneImage);
+    const sceneImageUrl = await this.uploadGeneratedFile(
+      sceneImage,
+      'scenes',
+      'png',
+    );
+
+    const videoPrompt = await this.buildVideoPrompt(
+      scenario,
+      collectionPersons.map(({ name }) => name),
+    );
+
+    const sceneVideo = await this.xaiService.generateVideo({
+      prompt: videoPrompt,
+      referenceImageUrls: [sceneImageUrl],
+      resolution: '720p',
+    });
+
+    if (!sceneVideo) {
+      throw new InternalServerErrorException('Scene video generation failed.');
+    }
+
+    const sceneVideoUrl = await this.uploadGeneratedFile(
+      sceneVideo,
+      'scene-videos',
+      'mp4',
+    );
+
+    return { sceneImageUrl, sceneVideoUrl };
   }
 
   private async buildScenePrompt(
@@ -92,13 +127,41 @@ export class CreateVideoService {
     return generatedPrompt || scenario;
   }
 
-  private async uploadSceneImage(image: GeneratedFile): Promise<string> {
-    const extension = image.mediaType?.split('/')[1] ?? 'png';
-    const key = `scenes/${Date.now()}-${randomUUID()}.${extension}`;
+  private async buildVideoPrompt(
+    scenario: string,
+    characterNames: string[],
+  ): Promise<string> {
+    const charactersHint = characterNames.length
+      ? `Characters present in the scene (keep their appearance unchanged): ${characterNames.join(', ')}.`
+      : '';
+
+    const instruction = [
+      ...SCENE_VIDEO_PROMPT_INSTRUCTIONS,
+      charactersHint,
+      '',
+      `Scene: ${scenario}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const generatedPrompt = await this.deepSeekService.generate({
+      prompt: instruction,
+    });
+
+    return generatedPrompt || `<IMAGE_1> comes to life: ${scenario}`;
+  }
+
+  private async uploadGeneratedFile(
+    file: GeneratedFile,
+    prefix: string,
+    fallbackExtension: string,
+  ): Promise<string> {
+    const extension = file.mediaType?.split('/')[1] ?? fallbackExtension;
+    const key = `${prefix}/${Date.now()}-${randomUUID()}.${extension}`;
     const { url } = await this.storageService.upload(
       key,
-      Buffer.from(image.uint8Array),
-      image.mediaType,
+      Buffer.from(file.uint8Array),
+      file.mediaType,
     );
 
     return url;
