@@ -1,4 +1,4 @@
-import { DataContent } from 'ai';
+import { DataContent, GeneratedFile } from 'ai';
 
 export type AspectRatio = `${number}:${number}`;
 
@@ -19,4 +19,9 @@ export interface GenerateVideoParams {
   prompt: string;
   referenceImageUrls: string[];
   resolution?: '480p' | '720p' | '1080p';
+}
+
+export interface XaiGeneratedVideo {
+  video: GeneratedFile;
+  videoUrl: string | null;
 }

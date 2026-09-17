@@ -18,6 +18,7 @@ import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
 } from 'src/character-gallery/entities/character-item.entity';
+import { CreateVideoCacheService } from './create-video-cache.service';
 
 @Injectable()
 export class CreateVideoService {
@@ -25,6 +26,7 @@ export class CreateVideoService {
     private readonly deepSeekService: DeepSeekService,
     private readonly xaiService: XaiService,
     private readonly storageService: StorageService,
+    private readonly createVideoCacheService: CreateVideoCacheService,
     @InjectRepository(CharacterCollectionItemEntity)
     private readonly characterСollectiorItemRepository: Repository<CharacterCollectionItemEntity>,
     @InjectRepository(CharacterItemEntity)
@@ -36,6 +38,15 @@ export class CreateVideoService {
   ): Promise<CreateVideoResponseDto> {
     const scenario = data?.scenario.toLowerCase();
     const collectionId = data?.collectionId;
+
+    const cached = await this.createVideoCacheService.get(
+      scenario,
+      collectionId,
+    );
+
+    if (cached) {
+      return cached;
+    }
 
     const [collection, collectionCharacters] = await Promise.all([
       this.characterСollectiorItemRepository.findOne({
@@ -85,17 +96,16 @@ export class CreateVideoService {
       resolution: '720p',
     });
 
-    if (!sceneVideo) {
+    if (!sceneVideo?.videoUrl) {
       throw new InternalServerErrorException('Scene video generation failed.');
     }
 
-    const sceneVideoUrl = await this.uploadGeneratedFile(
-      sceneVideo,
-      'scene-videos',
-      'mp4',
-    );
+    const sceneVideoUrl = sceneVideo.videoUrl;
+    const result = { sceneImageUrl, sceneVideoUrl };
 
-    return { sceneImageUrl, sceneVideoUrl };
+    await this.createVideoCacheService.set(scenario, collectionId, result);
+
+    return result;
   }
 
   private async buildScenePrompt(

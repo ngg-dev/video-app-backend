@@ -14,6 +14,7 @@ import {
   GenerateImageParams,
   GenerateParams,
   GenerateVideoParams,
+  XaiGeneratedVideo,
 } from './types/xai.types';
 
 @LogMethods()
@@ -89,8 +90,8 @@ export class XaiService {
     prompt,
     referenceImageUrls,
     resolution,
-  }: GenerateVideoParams): Promise<GeneratedFile | null> {
-    const { video } = await this.logger.trackExternalCall(
+  }: GenerateVideoParams): Promise<XaiGeneratedVideo | null> {
+    const { video, providerMetadata } = await this.logger.trackExternalCall(
       {
         provider: 'xai',
         operation: 'generateVideo',
@@ -113,8 +114,22 @@ export class XaiService {
             },
           },
         }),
+      ({ video, providerMetadata }) => ({
+        hasVideoUrl: typeof providerMetadata?.xai?.videoUrl === 'string',
+        mediaType: video?.mediaType,
+      }),
     );
 
-    return video || null;
+    if (!video) {
+      return null;
+    }
+
+    const rawVideoUrl = providerMetadata?.xai?.videoUrl;
+    const videoUrl =
+      typeof rawVideoUrl === 'string' && rawVideoUrl.length > 0
+        ? rawVideoUrl
+        : null;
+
+    return { video, videoUrl };
   }
 }
