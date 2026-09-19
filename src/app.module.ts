@@ -11,6 +11,7 @@ import { CreateVideoModule } from './create-video/create-video.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { CharacterGalleryModule } from './character-gallery/character-gallery.module';
 import { StorageModule } from './storage/storage.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { StorageModule } from './storage/storage.module';
     CreateVideoModule,
     CharacterGalleryModule,
     StorageModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
