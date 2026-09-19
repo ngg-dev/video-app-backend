@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CreateVideoController } from './create-video.controller';
 import { CreateVideoService } from './create-video.service';
 import { CreateVideoCacheService } from './create-video-cache.service';
+import { CreateVideoPromptService } from './create-video-prompt.service';
 import { DeepSeekModule } from 'src/ai-providers/deepseek/deepseek.module';
 import { XaiModule } from 'src/ai-providers/xai/xai.module';
 import { StorageModule } from 'src/storage/storage.module';
@@ -22,6 +23,10 @@ import {
     ]),
   ],
   controllers: [CreateVideoController],
-  providers: [CreateVideoService, CreateVideoCacheService],
+  providers: [
+    CreateVideoService,
+    CreateVideoPromptService,
+    CreateVideoCacheService,
+  ],
 })
 export class CreateVideoModule {}

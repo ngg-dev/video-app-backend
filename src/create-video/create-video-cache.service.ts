@@ -4,6 +4,7 @@ import { RedisService } from 'src/database/redis/redis.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { sanitizeForLog } from 'src/shared/logger/sanitize';
+import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import { CreateVideoResponseDto } from './dto/create-video.dto';
 import {
   CREATE_VIDEO_URL_KEY_PREFIX,
@@ -18,9 +19,13 @@ export class CreateVideoCacheService {
     private readonly logger: AppLoggerService,
   ) {}
 
-  buildKey(scenario: string, collectionId: string): string {
+  buildKey(
+    scenario: string,
+    collectionId: string,
+    aspectRatio: VideoAspectRatio,
+  ): string {
     const hash = createHash('sha256')
-      .update(`${scenario.toLowerCase()}|${collectionId}`)
+      .update(`${scenario.toLowerCase()}|${collectionId}|${aspectRatio}`)
       .digest('hex');
 
     return `${CREATE_VIDEO_URL_KEY_PREFIX}${hash}`;
@@ -29,8 +34,9 @@ export class CreateVideoCacheService {
   async get(
     scenario: string,
     collectionId: string,
+    aspectRatio: VideoAspectRatio,
   ): Promise<CreateVideoResponseDto | null> {
-    const key = this.buildKey(scenario, collectionId);
+    const key = this.buildKey(scenario, collectionId, aspectRatio);
 
     try {
       const raw = await this.logger.trackExternalCall(
@@ -73,9 +79,10 @@ export class CreateVideoCacheService {
   async set(
     scenario: string,
     collectionId: string,
+    aspectRatio: VideoAspectRatio,
     value: CreateVideoResponseDto,
   ): Promise<void> {
-    const key = this.buildKey(scenario, collectionId);
+    const key = this.buildKey(scenario, collectionId, aspectRatio);
 
     try {
       await this.logger.trackExternalCall(

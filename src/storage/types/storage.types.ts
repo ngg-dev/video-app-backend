@@ -11,3 +11,9 @@ export interface MulterFile {
   mimetype: string;
   originalname?: string;
 }
+
+/** Structural shape of an AI-generated file (e.g. `GeneratedFile` from the `ai` package). */
+export interface GeneratedFileLike {
+  uint8Array: Uint8Array;
+  mediaType?: string;
+}

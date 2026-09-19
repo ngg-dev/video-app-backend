@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 
 export class CreateRequestDto {
   @IsString()
@@ -8,6 +15,10 @@ export class CreateRequestDto {
 
   @IsString()
   collectionId!: string;
+
+  @IsOptional()
+  @IsEnum(VideoAspectRatio)
+  aspectRatio?: VideoAspectRatio;
 }
 
 export class CreateVideoResponseDto {

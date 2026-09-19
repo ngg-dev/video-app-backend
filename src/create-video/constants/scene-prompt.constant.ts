@@ -1,3 +1,5 @@
+import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
+
 export const SCENE_IMAGE_PROMPT_INSTRUCTIONS = [
   'You are a prompt engineer writing a prompt for Grok Imagine (xAI text-to-image model).',
   'Grok Imagine follows natural language, not comma-separated keyword stacks, so write flowing sentences, not tag lists.',
@@ -20,3 +22,39 @@ export const SCENE_VIDEO_PROMPT_INSTRUCTIONS = [
   'Do not invent new characters or locations that are not already implied by the scene.',
   'Respond with the prompt paragraph only, no headings, no explanations, no quotes.',
 ];
+
+export function buildSceneImageCharactersHint(
+  characterNames: string[],
+): string {
+  return characterNames.length
+    ? `Characters present in the scene (keep their appearance consistent with the reference images): ${characterNames.join(', ')}.`
+    : '';
+}
+
+export function buildSceneVideoCharactersHint(
+  characterNames: string[],
+): string {
+  return characterNames.length
+    ? `Characters present in the scene (keep their appearance unchanged): ${characterNames.join(', ')}.`
+    : '';
+}
+
+export function buildSceneStyleHint(collectionStyle: string | null): string {
+  return collectionStyle
+    ? `Render the image in the following visual style: ${collectionStyle}.`
+    : '';
+}
+
+export function buildSceneAspectRatioHint(
+  aspectRatio: VideoAspectRatio,
+): string {
+  return `Compose the shot for a ${aspectRatio} aspect ratio frame: the composition must fill this frame.`;
+}
+
+export function buildSceneLine(scenario: string): string {
+  return `Scene: ${scenario}`;
+}
+
+export function buildVideoPromptFallback(scenario: string): string {
+  return `<IMAGE_1> comes to life: ${scenario}`;
+}

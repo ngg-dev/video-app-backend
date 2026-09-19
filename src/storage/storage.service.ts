@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Inject } from '@nestjs/common';
 import {
   PutObjectCommand,
@@ -12,7 +13,7 @@ import {
   STORAGE_BUCKET,
   STORAGE_ENDPOINT,
 } from './constants/storage.constants';
-import type { UploadResult } from './types/storage.types';
+import type { UploadResult, GeneratedFileLike } from './types/storage.types';
 
 @LogMethods()
 @Injectable()
@@ -45,6 +46,18 @@ export class StorageService {
     );
     const url = this.getPublicUrl(key);
     return { key, url, etag: response.ETag };
+  }
+
+  /** Upload an AI-generated file under `prefix`, deriving the extension from its media type. */
+  async uploadGeneratedFile(
+    file: GeneratedFileLike,
+    prefix: string,
+    fallbackExtension = 'png',
+  ): Promise<UploadResult> {
+    const extension = file.mediaType?.split('/')[1] ?? fallbackExtension;
+    const key = `${prefix}/${Date.now()}-${randomUUID()}.${extension}`;
+
+    return this.upload(key, Buffer.from(file.uint8Array), file.mediaType);
   }
 
   /** Public URL for a key (if bucket is public). Path-style: endpoint/bucket/key. */
