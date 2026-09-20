@@ -12,6 +12,7 @@ import { LoggerModule } from './shared/logger/logger.module';
 import { CharacterGalleryModule } from './character-gallery/character-gallery.module';
 import { StorageModule } from './storage/storage.module';
 import { VideoPipeModule } from './video-pipe/video-pipe.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { VideoPipeModule } from './video-pipe/video-pipe.module';
     CharacterGalleryModule,
     StorageModule,
     VideoPipeModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
