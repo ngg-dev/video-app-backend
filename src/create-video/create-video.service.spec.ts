@@ -105,7 +105,6 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(createVideoCacheService.set).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '9:16',
       result,
     );
   });
@@ -150,7 +149,6 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(createVideoCacheService.get).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '9:16',
     );
     expect(xaiService.generateImage).not.toHaveBeenCalled();
     expect(xaiService.generateVideo).not.toHaveBeenCalled();
@@ -212,7 +210,7 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(firstCallArg).toMatchObject({ aspectRatio: '1:1' });
   });
 
-  it('includes the aspect ratio when reading from the cache', async () => {
+  it('reads from the cache independently of the requested aspect ratio', async () => {
     // Arrange
     const requestData: CreateRequestDto = {
       ...data,
@@ -226,11 +224,10 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(createVideoCacheService.get).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '16:9',
     );
   });
 
-  it('includes the aspect ratio when writing to the cache', async () => {
+  it('writes to the cache independently of the requested aspect ratio', async () => {
     // Arrange
     // data has no aspectRatio -> default should be written
 
@@ -242,7 +239,6 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(createVideoCacheService.set).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '9:16',
       result,
     );
   });
@@ -275,12 +271,10 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(createVideoCacheService.get).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '9:16',
     );
     expect(createVideoCacheService.set).toHaveBeenCalledWith(
       'a hero walks',
       'collection-1',
-      '9:16',
       result,
     );
   });

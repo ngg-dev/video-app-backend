@@ -16,6 +16,7 @@ import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
+import { isNotUndefined } from 'src/shared/utils';
 
 @Injectable()
 export class CreateVideoService {
@@ -41,7 +42,6 @@ export class CreateVideoService {
     const cached = await this.createVideoCacheService.get(
       scenario,
       collectionId,
-      aspectRatio,
     );
 
     if (cached) {
@@ -49,7 +49,7 @@ export class CreateVideoService {
     }
 
     const [collection, collectionCharacters] =
-      data.collection !== undefined && data.characters !== undefined
+      isNotUndefined(data.collection) && isNotUndefined(data.characters)
         ? [data.collection, data.characters]
         : await Promise.all([
             this.characterСollectiorItemRepository.findOne({
@@ -112,12 +112,7 @@ export class CreateVideoService {
     const sceneVideoUrl = sceneVideo.videoUrl;
     const result = { sceneImageUrl, sceneVideoUrl };
 
-    await this.createVideoCacheService.set(
-      scenario,
-      collectionId,
-      aspectRatio,
-      result,
-    );
+    await this.createVideoCacheService.set(scenario, collectionId, result);
 
     return result;
   }

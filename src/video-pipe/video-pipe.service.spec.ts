@@ -10,7 +10,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { VideoPipeService } from './video-pipe.service';
 import type { VideoPipeRequestDto } from './dto/video-pipe.dto';
+import { VIDEO_PIPE_RESULT_KEY_PREFIX } from './constants/video-pipe.constant';
 import type { CreateVideoService } from 'src/create-video/create-video.service';
+import type { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
+import type { MediaService } from 'src/media/media.service';
 import type {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
@@ -18,6 +21,8 @@ import type {
 
 describe('VideoPipeService.createVideoPipeline', () => {
   let createVideoService: { createVideoPipe: jest.Mock };
+  let mediaService: { concatNormalizedAndGetUrl: jest.Mock };
+  let createVideoCacheService: { delMany: jest.Mock };
   let characterCollectionItemRepository: { findOne: jest.Mock };
   let characterItemRepository: { find: jest.Mock };
   let service: VideoPipeService;
@@ -41,6 +46,15 @@ describe('VideoPipeService.createVideoPipeline', () => {
           }),
         ),
     };
+    mediaService = {
+      concatNormalizedAndGetUrl: jest.fn().mockResolvedValue({
+        url: 'https://storage.example/final.mp4',
+        key: 'videos/video-pipe/final.mp4',
+      }),
+    };
+    createVideoCacheService = {
+      delMany: jest.fn().mockResolvedValue(undefined),
+    };
     characterCollectionItemRepository = {
       findOne: jest.fn().mockResolvedValue(collection),
     };
@@ -48,6 +62,8 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
     service = new VideoPipeService(
       createVideoService as unknown as CreateVideoService,
+      mediaService as unknown as MediaService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionItemRepository as unknown as Repository<CharacterCollectionItemEntity>,
       characterItemRepository as unknown as Repository<CharacterItemEntity>,
     );
@@ -89,19 +105,142 @@ describe('VideoPipeService.createVideoPipeline', () => {
     }
   });
 
-  it('returns one response per scenario, in order', async () => {
+  it('returns the concatenated video url', async () => {
     // Act
     const result = await service.createVideoPipeline(data);
 
     // Assert
-    expect(result).toHaveLength(5);
-    expect(result.map((r) => r.sceneVideoUrl)).toEqual([
+    expect(result).toEqual({ videoUrl: 'https://storage.example/final.mp4' });
+  });
+
+  it('sends only sceneVideoUrl parts to the concat step, strictly in scenarios order', async () => {
+    // Arrange: scenarios resolve in reverse completion order (s5 fastest, s1 slowest),
+    // so the resulting order can only come from preserving request order, not completion order.
+    const delays: Record<string, number> = {
+      s1: 40,
+      s2: 30,
+      s3: 20,
+      s4: 10,
+      s5: 0,
+    };
+    createVideoService.createVideoPipe.mockImplementation(
+      (req: { scenario: string }) =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                sceneImageUrl: `https://storage.example/${req.scenario}.png`,
+                sceneVideoUrl: `https://storage.example/${req.scenario}.mp4`,
+              }),
+            delays[req.scenario],
+          ),
+        ),
+    );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    expect(mediaService.concatNormalizedAndGetUrl).toHaveBeenCalledTimes(1);
+    const [partUrls] = mediaService.concatNormalizedAndGetUrl.mock.calls[0] as [
+      string[],
+    ];
+    expect(partUrls).toEqual([
       'https://storage.example/s1.mp4',
       'https://storage.example/s2.mp4',
       'https://storage.example/s3.mp4',
       'https://storage.example/s4.mp4',
       'https://storage.example/s5.mp4',
     ]);
+  });
+
+  it('derives the concat target resolution from the requested aspect ratio', async () => {
+    // Arrange
+    const requestData: VideoPipeRequestDto = {
+      ...data,
+      aspectRatio: '16:9' as never,
+    };
+
+    // Act
+    await service.createVideoPipeline(requestData);
+
+    // Assert
+    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+      .calls[0] as [string[], { size: { width: number; height: number } }];
+    expect(options.size).toEqual({ width: 1280, height: 720 });
+  });
+
+  it('normalizes the concat target resolution to the default 9:16 when aspectRatio is omitted', async () => {
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+      .calls[0] as [string[], { size: { width: number; height: number } }];
+    expect(options.size).toEqual({ width: 720, height: 1280 });
+  });
+
+  it('uploads the result under the video-pipe key prefix', async () => {
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+      .calls[0] as [string[], { keyPrefix: string }];
+    expect(options.keyPrefix).toBe(VIDEO_PIPE_RESULT_KEY_PREFIX);
+  });
+
+  it('clears the parts cache after a successful upload, exactly for the request input', async () => {
+    // Arrange
+    const requestData: VideoPipeRequestDto = {
+      ...data,
+      aspectRatio: '1:1' as never,
+    };
+
+    // Act
+    await service.createVideoPipeline(requestData);
+
+    // Assert
+    expect(createVideoCacheService.delMany).toHaveBeenCalledTimes(1);
+    expect(createVideoCacheService.delMany).toHaveBeenCalledWith(
+      requestData.scenarios,
+      'collection-1',
+    );
+  });
+
+  it('clears the parts cache only after concat and upload have completed', async () => {
+    // Arrange
+    const callOrder: string[] = [];
+    mediaService.concatNormalizedAndGetUrl.mockImplementation(() => {
+      callOrder.push('concat');
+      return Promise.resolve({
+        url: 'https://storage.example/final.mp4',
+        key: 'videos/video-pipe/final.mp4',
+      });
+    });
+    createVideoCacheService.delMany.mockImplementation(() => {
+      callOrder.push('delMany');
+      return Promise.resolve(undefined);
+    });
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    expect(callOrder).toEqual(['concat', 'delMany']);
+  });
+
+  it('propagates a concat/upload failure and leaves the parts cache untouched', async () => {
+    // Arrange
+    mediaService.concatNormalizedAndGetUrl.mockRejectedValue(
+      new Error('ffmpeg failed'),
+    );
+
+    // Act & Assert
+    await expect(service.createVideoPipeline(data)).rejects.toThrow(
+      'ffmpeg failed',
+    );
+    expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
   it('applies the default aspect ratio when the request omits it', async () => {
@@ -145,7 +284,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     }
   });
 
-  it('throws NotFoundException when the collection does not exist, without calling createVideoPipe for any scene', async () => {
+  it('throws NotFoundException when the collection does not exist, without calling createVideoPipe/concat/delMany for any scene', async () => {
     // Arrange
     characterCollectionItemRepository.findOne.mockResolvedValue(null);
 
@@ -154,9 +293,11 @@ describe('VideoPipeService.createVideoPipeline', () => {
       NotFoundException,
     );
     expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
+    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequestException when the collection has no style set, without calling createVideoPipe for any scene', async () => {
+  it('throws BadRequestException when the collection has no style set, without calling createVideoPipe/concat/delMany for any scene', async () => {
     // Arrange
     characterCollectionItemRepository.findOne.mockResolvedValue({
       id: 'collection-1',
@@ -168,9 +309,11 @@ describe('VideoPipeService.createVideoPipeline', () => {
       BadRequestException,
     );
     expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
+    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
-  it('propagates a rejection from any single scene (fail-fast)', async () => {
+  it('propagates a rejection from any single scene (fail-fast) without reaching concat/delMany', async () => {
     // Arrange
     createVideoService.createVideoPipe
       .mockResolvedValueOnce({
@@ -183,5 +326,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       'scene 2 failed',
     );
+    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 });

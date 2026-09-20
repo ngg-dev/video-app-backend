@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { isNotNull } from 'src/shared/utils';
 import { AppLoggerService } from './logger.service';
 
 interface ErrorResponseBody {
@@ -21,7 +22,7 @@ function extractHttpExceptionMessage(
   const response = exception.getResponse();
   if (
     typeof response === 'object' &&
-    response !== null &&
+    isNotNull(response) &&
     'message' in response
   ) {
     const { message } = response;

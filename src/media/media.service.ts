@@ -10,9 +10,10 @@ import {
   computeCropForAspectRatio,
 } from 'src/media/utils/media-path.util';
 import { StorageService } from 'src/storage/storage.service';
-import { downloadBinaryToPath, isNullOrUndefined } from 'src/shared/utils';
+import { downloadBinaryToPath, isNotNullOrUndefined } from 'src/shared/utils';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
+import { MEDIA_CONCAT_KEY_PREFIX } from 'src/media/constants/media.constant';
 import type {
   TrimOptions,
   TrimToShortsOptions,
@@ -46,9 +47,9 @@ export class MediaService {
 
     // -ss before -i for fast seek (input seeking)
     args.push('-ss', String(startSec));
-    if (!isNullOrUndefined(endSec)) {
+    if (isNotNullOrUndefined(endSec)) {
       args.push('-to', String(endSec));
-    } else if (!isNullOrUndefined(durationSec)) {
+    } else if (isNotNullOrUndefined(durationSec)) {
       args.push('-t', String(durationSec));
     }
 
@@ -62,8 +63,8 @@ export class MediaService {
       );
       args.push('-vf', `crop=${cropW}:${cropH}:${cropX}:${cropY}`);
     } else if (
-      !isNullOrUndefined(crop?.width) &&
-      !isNullOrUndefined(crop?.height)
+      isNotNullOrUndefined(crop?.width) &&
+      isNotNullOrUndefined(crop?.height)
     ) {
       args.push(
         '-vf',
@@ -146,6 +147,23 @@ export class MediaService {
     inputPaths: string[],
     outputPath: string,
   ): Promise<void> {
+    return this.concatNormalized(inputPaths, outputPath, {
+      width: 720,
+      height: 1280,
+    });
+  }
+
+  /**
+   * Concatenate generated clips through a filter graph and re-encode, normalizing every
+   * input to the given size. This avoids MP4/H264 stream-parameter drift from generated
+   * segments that can make some players render later clips with broken geometry (for
+   * example duplicated top/bottom frames) when using concat demuxer + `-c copy`.
+   */
+  async concatNormalized(
+    inputPaths: string[],
+    outputPath: string,
+    size: { width: number; height: number },
+  ): Promise<void> {
     if (inputPaths.length === 0) {
       throw new Error('No videos to concatenate.');
     }
@@ -159,7 +177,7 @@ export class MediaService {
     const concatInputs: string[] = [];
     for (let i = 0; i < inputPaths.length; i++) {
       filterParts.push(
-        `[${i}:v:0]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24,format=yuv420p[v${i}]`,
+        `[${i}:v:0]scale=${size.width}:${size.height}:force_original_aspect_ratio=decrease,pad=${size.width}:${size.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24,format=yuv420p[v${i}]`,
         `[${i}:a:0]aresample=async=1:first_pts=0[a${i}]`,
       );
       concatInputs.push(`[v${i}][a${i}]`);
@@ -219,7 +237,7 @@ export class MediaService {
       await this.concat(partPaths, resultPath);
 
       const buffer = await readFile(resultPath);
-      const key = `videos/concat/${requestId}.mp4`;
+      const key = `${MEDIA_CONCAT_KEY_PREFIX}/${requestId}.mp4`;
       this.logger.log(`[concat-and-get-url] Uploading to storage key="${key}"`);
       const uploaded = await this.storage.upload(key, buffer, 'video/mp4');
 
@@ -232,13 +250,28 @@ export class MediaService {
   async concatNormalizedVerticalAndGetUrl(
     inputUrls: string[],
   ): Promise<{ url: string; key: string }> {
+    return this.concatNormalizedAndGetUrl(inputUrls, {
+      size: { width: 720, height: 1280 },
+      keyPrefix: MEDIA_CONCAT_KEY_PREFIX,
+    });
+  }
+
+  /**
+   * Download videos from URLs, concat them normalized to the given size, upload the
+   * result to storage under `<keyPrefix>/<requestId>.mp4`, return public URL and key.
+   * Intermediate files live only in tmpdir and are cleaned up after upload.
+   */
+  async concatNormalizedAndGetUrl(
+    inputUrls: string[],
+    options: { size: { width: number; height: number }; keyPrefix: string },
+  ): Promise<{ url: string; key: string }> {
     const requestId = randomUUID();
     const tempDir = join(tmpdir(), `concat-${requestId}`);
     await mkdir(tempDir, { recursive: true });
 
     try {
       this.logger.log(
-        `[concat-normalized-vertical] Downloading ${inputUrls.length} video(s) to ${tempDir}`,
+        `[concat-normalized] Downloading ${inputUrls.length} video(s) to ${tempDir}`,
       );
       const partPaths = await Promise.all(
         inputUrls.map((url, i) => {
@@ -248,16 +281,12 @@ export class MediaService {
       );
 
       const resultPath = join(tempDir, 'result.mp4');
-      this.logger.log(
-        `[concat-normalized-vertical] Concatenating to ${resultPath}`,
-      );
-      await this.concatNormalizedVertical(partPaths, resultPath);
+      this.logger.log(`[concat-normalized] Concatenating to ${resultPath}`);
+      await this.concatNormalized(partPaths, resultPath, options.size);
 
       const buffer = await readFile(resultPath);
-      const key = `videos/concat/${requestId}.mp4`;
-      this.logger.log(
-        `[concat-normalized-vertical] Uploading to storage key="${key}"`,
-      );
+      const key = `${options.keyPrefix}/${requestId}.mp4`;
+      this.logger.log(`[concat-normalized] Uploading to storage key="${key}"`);
       const uploaded = await this.storage.upload(key, buffer, 'video/mp4');
 
       return { url: uploaded.url, key: uploaded.key };

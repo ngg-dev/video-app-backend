@@ -5,6 +5,7 @@ import {
   LOG_REDACTED_KEYS,
   LOG_REDACTED_PLACEHOLDER,
 } from 'src/shared/constants/logger';
+import { isNullOrUndefined } from 'src/shared/utils';
 
 const REDACTED_KEYS_LOWER = LOG_REDACTED_KEYS.map((key) => key.toLowerCase());
 
@@ -25,7 +26,7 @@ export function sanitizeForLog(
   depth = 0,
   seen: WeakSet<object> = new WeakSet(),
 ): unknown {
-  if (value === null || value === undefined) {
+  if (isNullOrUndefined(value)) {
     return value;
   }
 

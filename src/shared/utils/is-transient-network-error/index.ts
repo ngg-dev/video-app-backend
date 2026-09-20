@@ -1,14 +1,19 @@
+import {
+  isNotNullOrUndefined,
+  isNullOrUndefined,
+} from '../is-null-or-undefined';
+
 /**
  * True for fetch/socket errors that may succeed on retry (timeouts, resets, etc.).
  */
 export function isTransientNetworkError(err: unknown): boolean {
-  if (err == null) return false;
+  if (isNullOrUndefined(err)) return false;
 
   const codes = new Set<string>();
   const messages: string[] = [];
 
   const visit = (node: unknown, depth: number): void => {
-    if (node == null || depth > 6) return;
+    if (isNullOrUndefined(node) || depth > 6) return;
     if (typeof node === 'string') {
       messages.push(node);
       return;
@@ -17,14 +22,14 @@ export function isTransientNetworkError(err: unknown): boolean {
       messages.push(node.message);
       const code = (node as NodeJS.ErrnoException).code;
       if (typeof code === 'string') codes.add(code);
-      if (node.cause != null) visit(node.cause, depth + 1);
+      if (isNotNullOrUndefined(node.cause)) visit(node.cause, depth + 1);
       return;
     }
     if (typeof node === 'object') {
       const o = node as Record<string, unknown>;
       if (typeof o.message === 'string') messages.push(o.message);
       if (typeof o.code === 'string') codes.add(o.code);
-      if (o.cause != null) visit(o.cause, depth + 1);
+      if (isNotNullOrUndefined(o.cause)) visit(o.cause, depth + 1);
     }
   };
 

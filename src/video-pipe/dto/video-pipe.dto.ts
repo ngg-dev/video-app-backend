@@ -9,7 +9,6 @@ import {
 } from 'class-validator';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import { VIDEO_PIPE_SCENE_COUNT } from '../constants/video-pipe.constant';
-import { CreateVideoResponseDto } from 'src/create-video/dto/create-video.dto';
 
 export class VideoPipeRequestDto {
   @ArrayMinSize(VIDEO_PIPE_SCENE_COUNT)
@@ -27,4 +26,6 @@ export class VideoPipeRequestDto {
   aspectRatio?: VideoAspectRatio;
 }
 
-export type VideoPipeResponseDto = CreateVideoResponseDto[];
+export class VideoPipeResponseDto {
+  videoUrl!: string;
+}

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { VideoPipeController } from './video-pipe.controller';
 import { VideoPipeService } from './video-pipe.service';
 import { CreateVideoModule } from 'src/create-video/create-video.module';
+import { MediaModule } from 'src/media/media.module';
 import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
@@ -11,6 +12,7 @@ import {
 @Module({
   imports: [
     CreateVideoModule,
+    MediaModule,
     TypeOrmModule.forFeature([
       CharacterCollectionItemEntity,
       CharacterItemEntity,
