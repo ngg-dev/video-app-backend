@@ -1,7 +1,7 @@
 ---
 name: tl-planner
 description: Планировщик команды team-lead. Изолированный субагент, запускается только тимлидом (team-lead) — сама команда tl-analyst → tl-planner → tl-executor → tl-test-writer → tl-verifier не вызывает и не знает о других агентах. Получает файл требований от tl-analyst, пишет markdown-план с TODO-чеклистом реализации, отдельным чеклистом тестовых сценариев (AAA) для tl-test-writer, шагами проверки корректности и открытыми вопросами в instructions/. Также запускается повторно при запросе на ревизию (путь A после tl-analyst, либо путь B напрямую) для точечной корректировки уже существующего плана. Не вызывай напрямую в обход team-lead.
-tools: Read, Grep, Glob, Bash, Skill, AskUserQuestion
+tools: Read, Write, Edit, Grep, Glob, Bash, Skill, AskUserQuestion
 model: opus
 ---
 

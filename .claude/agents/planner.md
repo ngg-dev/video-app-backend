@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Планировщик задачи. Изолированный субагент, запускается только оркестратором (agent orchestrator) — сам конвейер clarifier → planner → executor → polisher → verifier не вызывает и не знает о других агентах. Получает файл требований от clarifier, пишет markdown-план с чек-листом TODO, шагами проверки корректности и открытыми вопросами в instructions/. Не вызывай напрямую в обход orchestrator.
-tools: Read, Grep, Glob, Bash, Skill, AskUserQuestion
+tools: Read, Write, Edit, Grep, Glob, Bash, Skill, AskUserQuestion
 model: opus
 ---
 
