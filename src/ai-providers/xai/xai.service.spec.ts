@@ -1,4 +1,4 @@
-import { experimental_generateVideo as generateVideo } from 'ai';
+import { experimental_generateVideo as generateVideo, generateImage } from 'ai';
 import { XaiService } from './xai.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 
@@ -105,6 +105,29 @@ describe('XaiService.generateVideo', () => {
     expect(result).toBeNull();
   });
 
+  it('forwards duration to the provider when given', async () => {
+    const video = { uint8Array: new Uint8Array(), mediaType: 'video/mp4' };
+    (generateVideo as jest.Mock).mockResolvedValue({ video });
+
+    await service.generateVideo({ ...baseParams, duration: 5 });
+
+    expect(generateVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ duration: 5 }),
+    );
+  });
+
+  it('omits duration from the provider call when not given', async () => {
+    const video = { uint8Array: new Uint8Array(), mediaType: 'video/mp4' };
+    (generateVideo as jest.Mock).mockResolvedValue({ video });
+
+    await service.generateVideo(baseParams);
+
+    const [callArg] = (generateVideo as jest.Mock).mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(callArg).not.toHaveProperty('duration');
+  });
+
   it('logs external.request and external.response', async () => {
     const video = { uint8Array: new Uint8Array(), mediaType: 'video/mp4' };
     (generateVideo as jest.Mock).mockResolvedValue({
@@ -135,5 +158,84 @@ describe('XaiService.generateVideo', () => {
       JSON.stringify(call),
     );
     expect(loggedEvents.some((c) => c.includes('external.error'))).toBe(true);
+  });
+
+  it('calls the provider with the full expected shape, including model, prompt, duration and providerOptions.xai', async () => {
+    // Arrange
+    const video = { uint8Array: new Uint8Array(), mediaType: 'video/mp4' };
+    (generateVideo as jest.Mock).mockResolvedValue({ video });
+
+    // Act
+    await service.generateVideo({
+      prompt: 'animate it',
+      referenceImageUrls: ['https://example.com/scene.png'],
+      resolution: '720p',
+      duration: 5,
+    });
+
+    // Assert
+    expect(generateVideo).toHaveBeenCalledWith({
+      model: 'mock-video-model',
+      prompt: 'animate it',
+      duration: 5,
+      providerOptions: {
+        xai: {
+          mode: 'reference-to-video',
+          referenceImageUrls: ['https://example.com/scene.png'],
+          resolution: '720p',
+        },
+      },
+    });
+  });
+});
+
+describe('XaiService.generateImage', () => {
+  let service: XaiService;
+  let logger: AppLoggerService;
+
+  beforeEach(() => {
+    logger = new AppLoggerService();
+    jest.spyOn(logger, 'log').mockImplementation(() => undefined);
+    jest.spyOn(logger, 'error').mockImplementation(() => undefined);
+    service = new XaiService(logger);
+    jest.clearAllMocks();
+  });
+
+  it('calls the provider with wrapped prompt, referenceImages and aspectRatio when given', async () => {
+    // Arrange
+    (generateImage as jest.Mock).mockResolvedValue({
+      image: { mediaType: 'image/png' },
+    });
+
+    // Act
+    await service.generateImage({
+      prompt: 'a hero',
+      referenceImages: ['data'],
+      aspectRatio: '9:16',
+    });
+
+    // Assert
+    expect(generateImage).toHaveBeenCalledWith({
+      model: 'mock-image-model',
+      prompt: { text: 'a hero', images: ['data'] },
+      aspectRatio: '9:16',
+    });
+  });
+
+  it('calls the provider with a plain string prompt and no aspectRatio key when only prompt is given', async () => {
+    // Arrange
+    (generateImage as jest.Mock).mockResolvedValue({
+      image: { mediaType: 'image/png' },
+    });
+
+    // Act
+    await service.generateImage({ prompt: 'a hero' });
+
+    // Assert
+    const [callArg] = (generateImage as jest.Mock).mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(callArg.prompt).toBe('a hero');
+    expect(callArg).not.toHaveProperty('aspectRatio');
   });
 });

@@ -1,4 +1,8 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
@@ -70,7 +74,9 @@ describe('CreateVideoService.createVideoPipe', () => {
       set: jest.fn().mockResolvedValue(undefined),
     };
     characterCollectionItemRepository = {
-      findOne: jest.fn().mockResolvedValue({ id: 'collection-1', style: null }),
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'collection-1', style: 'noir' }),
     };
     characterItemRepository = { find: jest.fn().mockResolvedValue([]) };
 
@@ -123,6 +129,31 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(xaiService.generateImage).not.toHaveBeenCalled();
     expect(xaiService.generateVideo).not.toHaveBeenCalled();
     expect(storageService.uploadGeneratedFile).not.toHaveBeenCalled();
+  });
+
+  it('serves a cache hit regardless of the requested duration', async () => {
+    // Arrange
+    createVideoCacheService.get.mockResolvedValue({
+      sceneImageUrl: 'https://cached/image.png',
+      sceneVideoUrl: 'https://cached/video.mp4',
+    });
+    const requestData: CreateRequestDto = { ...data, duration: 12 };
+
+    // Act
+    const result = await service.createVideoPipe(requestData);
+
+    // Assert
+    expect(result).toEqual({
+      sceneImageUrl: 'https://cached/image.png',
+      sceneVideoUrl: 'https://cached/video.mp4',
+    });
+    expect(createVideoCacheService.get).toHaveBeenCalledWith(
+      'a hero walks',
+      'collection-1',
+      '9:16',
+    );
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+    expect(xaiService.generateVideo).not.toHaveBeenCalled();
   });
 
   it('still returns a fresh pair when Redis is unavailable', async () => {
@@ -216,6 +247,44 @@ describe('CreateVideoService.createVideoPipe', () => {
     );
   });
 
+  it('applies the default duration when the request omits it', async () => {
+    // Act
+    await service.createVideoPipe(data);
+
+    // Assert
+    expect(xaiService.generateVideo).toHaveBeenCalledTimes(1);
+    const [firstCallArg] = xaiService.generateVideo.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(firstCallArg).toMatchObject({ duration: 5 });
+  });
+
+  it('forwards an explicitly requested duration to the video provider and to the cache', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = { ...data, duration: 12 };
+
+    // Act
+    const result = await service.createVideoPipe(requestData);
+
+    // Assert
+    expect(xaiService.generateVideo).toHaveBeenCalledTimes(1);
+    const [firstCallArg] = xaiService.generateVideo.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(firstCallArg).toMatchObject({ duration: 12 });
+    expect(createVideoCacheService.get).toHaveBeenCalledWith(
+      'a hero walks',
+      'collection-1',
+      '9:16',
+    );
+    expect(createVideoCacheService.set).toHaveBeenCalledWith(
+      'a hero walks',
+      'collection-1',
+      '9:16',
+      result,
+    );
+  });
+
   it('delegates the image prompt build to the prompt service, forwarding the matched characters and style', async () => {
     // Arrange
     createVideoPromptService.buildScenePrompt.mockResolvedValue('scene prompt');
@@ -275,6 +344,7 @@ describe('CreateVideoService.createVideoPipe', () => {
       prompt: 'video prompt',
       referenceImageUrls: ['https://storage.example/scenes/a.png'],
       resolution: '720p',
+      duration: 5,
     });
   });
 
@@ -307,6 +377,77 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(storageService.uploadGeneratedFile).not.toHaveBeenCalled();
     expect(createVideoPromptService.buildVideoPrompt).not.toHaveBeenCalled();
     expect(createVideoCacheService.set).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when the collection does not exist, without generating anything', async () => {
+    // Arrange
+    characterCollectionItemRepository.findOne.mockResolvedValue(null);
+
+    // Act & Assert
+    await expect(service.createVideoPipe(data)).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+    expect(xaiService.generateVideo).not.toHaveBeenCalled();
+    expect(createVideoCacheService.set).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequestException when the collection has no style set, without generating anything', async () => {
+    // Arrange
+    characterCollectionItemRepository.findOne.mockResolvedValue({
+      id: 'collection-1',
+      style: null,
+    });
+
+    // Act & Assert
+    await expect(service.createVideoPipe(data)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+    expect(xaiService.generateVideo).not.toHaveBeenCalled();
+    expect(createVideoCacheService.set).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequestException for preloaded collection/characters with no style set', async () => {
+    // Arrange
+    const preloadedCollection = { id: 'collection-1', style: null };
+
+    // Act & Assert
+    await expect(
+      service.createVideoPipe({
+        scenario: 'Bob walks',
+        collectionId: 'collection-1',
+        collection: preloadedCollection as never,
+        characters: [],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+  });
+
+  it('skips repository lookups and uses preloaded collection/characters when both are provided', async () => {
+    // Arrange
+    const preloadedCollection = { id: 'collection-1', style: 'noir' };
+    const preloadedCharacters = [
+      { name: 'Bob', imageUrl: 'https://img/bob.png' },
+    ];
+
+    // Act
+    await service.createVideoPipe({
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      collection: preloadedCollection as never,
+      characters: preloadedCharacters as never,
+    });
+
+    // Assert
+    expect(characterCollectionItemRepository.findOne).not.toHaveBeenCalled();
+    expect(characterItemRepository.find).not.toHaveBeenCalled();
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      'bob walks',
+      ['Bob'],
+      'noir',
+      '9:16',
+    );
   });
 
   it('does not pass an aspect ratio to the video generation call', async () => {

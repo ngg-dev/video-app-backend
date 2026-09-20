@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { RedisService } from 'src/database/redis/redis.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
@@ -93,6 +94,23 @@ describe('CreateVideoCacheService', () => {
       expect(verticalKey1).not.toBe(horizontalKey);
       expect(verticalKey1.startsWith(CREATE_VIDEO_URL_KEY_PREFIX)).toBe(true);
       expect(horizontalKey.startsWith(CREATE_VIDEO_URL_KEY_PREFIX)).toBe(true);
+    });
+
+    it('is computed strictly from scenario|collectionId|aspectRatio, without duration', () => {
+      // Arrange
+      const expected =
+        CREATE_VIDEO_URL_KEY_PREFIX +
+        createHash('sha256').update('a scene|collection-1|9:16').digest('hex');
+
+      // Act
+      const key = service.buildKey(
+        'A Scene',
+        'collection-1',
+        VideoAspectRatio.Vertical,
+      );
+
+      // Assert
+      expect(key).toBe(expected);
     });
   });
 

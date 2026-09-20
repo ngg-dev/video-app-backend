@@ -16,6 +16,10 @@ import {
   GenerateVideoParams,
   XaiGeneratedVideo,
 } from './types/xai.types';
+import {
+  buildGenerateImageOptions,
+  buildGenerateVideoOptions,
+} from './utils/xai-request-builders.util';
 
 @LogMethods()
 @Injectable()
@@ -59,8 +63,6 @@ export class XaiService {
     referenceImages,
     aspectRatio,
   }: GenerateImageParams): Promise<GeneratedFile | null> {
-    const hasReferenceImages = !!referenceImages?.length;
-
     const { image } = await this.logger.trackExternalCall(
       {
         provider: 'xai',
@@ -75,10 +77,11 @@ export class XaiService {
       () =>
         generateImage({
           model: xai.image('grok-imagine-image-2.0'),
-          prompt: hasReferenceImages
-            ? { text: prompt, images: referenceImages }
-            : prompt,
-          ...(aspectRatio ? { aspectRatio } : {}),
+          ...buildGenerateImageOptions({
+            prompt,
+            referenceImages,
+            aspectRatio,
+          }),
         }),
     );
 
@@ -90,6 +93,7 @@ export class XaiService {
     prompt,
     referenceImageUrls,
     resolution,
+    duration,
   }: GenerateVideoParams): Promise<XaiGeneratedVideo | null> {
     const { video, providerMetadata } = await this.logger.trackExternalCall(
       {
@@ -100,19 +104,18 @@ export class XaiService {
           promptLength: prompt.length,
           prompt,
           referenceImagesCount: referenceImageUrls.length,
+          duration,
         },
       },
       () =>
         generateVideo({
           model: this.xaiSource.video(model),
-          prompt,
-          providerOptions: {
-            xai: {
-              mode: 'reference-to-video',
-              referenceImageUrls,
-              ...(resolution ? { resolution } : {}),
-            },
-          },
+          ...buildGenerateVideoOptions({
+            prompt,
+            referenceImageUrls,
+            resolution,
+            duration,
+          }),
         }),
       ({ video, providerMetadata }) => ({
         hasVideoUrl: typeof providerMetadata?.xai?.videoUrl === 'string',

@@ -28,5 +28,6 @@ import {
     CreateVideoPromptService,
     CreateVideoCacheService,
   ],
+  exports: [CreateVideoService],
 })
 export class CreateVideoModule {}

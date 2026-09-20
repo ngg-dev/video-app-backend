@@ -19,6 +19,8 @@ export interface GenerateVideoParams {
   prompt: string;
   referenceImageUrls: string[];
   resolution?: '480p' | '720p' | '1080p';
+  /** Duration of the generated video, in seconds. */
+  duration?: number;
 }
 
 export interface XaiGeneratedVideo {

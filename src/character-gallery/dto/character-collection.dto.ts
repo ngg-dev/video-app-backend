@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { CharacterStyle } from 'src/shared/constants/character-style';
 
 export class CreateCharacterCollectionDto {
@@ -13,7 +7,6 @@ export class CreateCharacterCollectionDto {
   @MaxLength(255)
   name!: string;
 
-  @IsOptional()
   @IsEnum(CharacterStyle)
   style?: CharacterStyle;
 }

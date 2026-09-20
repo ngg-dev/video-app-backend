@@ -11,9 +11,11 @@ import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
 } from 'src/character-gallery/entities/character-item.entity';
+import { assertCollectionHasStyle } from 'src/character-gallery/utils/character-collection.util';
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
+import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
 
 @Injectable()
 export class CreateVideoService {
@@ -34,6 +36,7 @@ export class CreateVideoService {
     const scenario = data?.scenario.toLowerCase();
     const collectionId = data?.collectionId;
     const aspectRatio = data?.aspectRatio ?? DEFAULT_VIDEO_ASPECT_RATIO;
+    const duration = data?.duration ?? DEFAULT_VIDEO_DURATION_SECONDS;
 
     const cached = await this.createVideoCacheService.get(
       scenario,
@@ -45,16 +48,21 @@ export class CreateVideoService {
       return cached;
     }
 
-    const [collection, collectionCharacters] = await Promise.all([
-      this.characterСollectiorItemRepository.findOne({
-        where: { id: collectionId },
-      }),
-      this.characterItemRepository.find({
-        where: {
-          collectionId: collectionId,
-        },
-      }),
-    ]);
+    const [collection, collectionCharacters] =
+      data.collection !== undefined && data.characters !== undefined
+        ? [data.collection, data.characters]
+        : await Promise.all([
+            this.characterСollectiorItemRepository.findOne({
+              where: { id: collectionId },
+            }),
+            this.characterItemRepository.find({
+              where: {
+                collectionId: collectionId,
+              },
+            }),
+          ]);
+
+    assertCollectionHasStyle(collection);
 
     const collectionPersons = collectionCharacters.filter(({ name }) =>
       scenario.includes(name.toLowerCase()),
@@ -64,7 +72,7 @@ export class CreateVideoService {
     const scenePrompt = await this.createVideoPromptService.buildScenePrompt(
       scenario,
       collectionPersons.map(({ name }) => name),
-      collection?.style ?? null,
+      collection.style,
       aspectRatio,
     );
 
@@ -94,6 +102,7 @@ export class CreateVideoService {
       prompt: videoPrompt,
       referenceImageUrls: [sceneImageUrl],
       resolution: '720p',
+      duration,
     });
 
     if (!sceneVideo?.videoUrl) {
