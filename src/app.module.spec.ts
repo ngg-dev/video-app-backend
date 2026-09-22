@@ -32,3 +32,17 @@ describe('AppModule generation-item status (branch 11a - deleted)', () => {
     );
   });
 });
+
+describe('AppModule scenario-plan registration', () => {
+  it('imports ScenarioPlanModule', () => {
+    // Arrange
+    const appModulePath = join(__dirname, 'app.module.ts');
+    const appModuleContent = readFileSync(appModulePath, 'utf-8');
+
+    // Act & Assert
+    expect(appModuleContent).toContain(
+      "import { ScenarioPlanModule } from './scenario-plan/scenario-plan.module'",
+    );
+    expect(appModuleContent).toContain('ScenarioPlanModule');
+  });
+});

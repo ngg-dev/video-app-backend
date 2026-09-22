@@ -8,11 +8,14 @@ import {
   MaxLength,
 } from 'class-validator';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
-import { VIDEO_PIPE_SCENE_COUNT } from '../constants/video-pipe.constant';
+import {
+  MAX_SCENE_COUNT,
+  MIN_SCENE_COUNT,
+} from 'src/shared/constants/scene-count';
 
 export class VideoPipeRequestDto {
-  @ArrayMinSize(VIDEO_PIPE_SCENE_COUNT)
-  @ArrayMaxSize(VIDEO_PIPE_SCENE_COUNT)
+  @ArrayMinSize(MIN_SCENE_COUNT)
+  @ArrayMaxSize(MAX_SCENE_COUNT)
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
   @MaxLength(100_000, { each: true })

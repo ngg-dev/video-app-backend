@@ -12,6 +12,7 @@ import { CharacterGalleryModule } from './character-gallery/character-gallery.mo
 import { StorageModule } from './storage/storage.module';
 import { VideoPipeModule } from './video-pipe/video-pipe.module';
 import { MediaModule } from './media/media.module';
+import { ScenarioPlanModule } from './scenario-plan/scenario-plan.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MediaModule } from './media/media.module';
     StorageModule,
     VideoPipeModule,
     MediaModule,
+    ScenarioPlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],
