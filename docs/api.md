@@ -72,7 +72,7 @@
 Тело:
 ```
 {
-  scenarios: string[],       // ровно VIDEO_PIPE_SCENE_COUNT штук
+  scenarios: string[],       // 1 и более сценариев, одна сцена на сценарий, верхнего предела нет
   collectionId: string,
   aspectRatio?: "9:16" | "16:9" | "1:1"
 }

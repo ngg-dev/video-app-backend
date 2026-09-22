@@ -91,8 +91,8 @@
   3. `VideoAssemblyService.concatNormalizedAndGetUrl` — скачивает video-части, склеивает
      через ffmpeg под целевой aspect ratio, грузит результат в S3.
   4. Инвалидирует кэш использованных сценариев (`CreateVideoCacheService.delMany`).
-- Число сцен в запросе фиксировано (`VIDEO_PIPE_SCENE_COUNT`,
-  `constants/video-pipe.constant.ts`), проверяется через `@ArrayMinSize`/`@ArrayMaxSize`.
+- Число сцен в запросе равно длине `scenarios`: нижний предел — непустой массив (`@ArrayNotEmpty`),
+  верхнего предела нет.
 - Контроллер: `VideoPipeController` — `POST /video-pipe/create`.
 
 ## `src/media`

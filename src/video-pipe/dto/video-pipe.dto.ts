@@ -1,6 +1,5 @@
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
+  ArrayNotEmpty,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -8,11 +7,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
-import { VIDEO_PIPE_SCENE_COUNT } from '../constants/video-pipe.constant';
 
 export class VideoPipeRequestDto {
-  @ArrayMinSize(VIDEO_PIPE_SCENE_COUNT)
-  @ArrayMaxSize(VIDEO_PIPE_SCENE_COUNT)
+  @ArrayNotEmpty()
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
   @MaxLength(100_000, { each: true })
