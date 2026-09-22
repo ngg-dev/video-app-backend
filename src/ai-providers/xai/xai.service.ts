@@ -7,7 +7,11 @@ import {
   generateText,
 } from 'ai';
 import { XAI_API_KEY } from 'src/shared/constants/config';
-import { xaiModels, xaiVideoModels } from 'src/shared/constants/xai';
+import {
+  xaiImageModels,
+  xaiModels,
+  xaiVideoModels,
+} from 'src/shared/constants/xai';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import {
@@ -76,7 +80,7 @@ export class XaiService {
       },
       () =>
         generateImage({
-          model: xai.image('grok-imagine-image-2.0'),
+          model: xai.image(xaiImageModels.grokImagineImage20),
           ...buildGenerateImageOptions({
             prompt,
             referenceImages,

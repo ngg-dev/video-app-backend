@@ -7,24 +7,21 @@ jest.mock('src/create-video/create-video.service', () => ({
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { Repository } from 'typeorm';
 import { VideoPipeService } from './video-pipe.service';
 import type { VideoPipeRequestDto } from './dto/video-pipe.dto';
 import { VIDEO_PIPE_RESULT_KEY_PREFIX } from './constants/video-pipe.constant';
 import type { CreateVideoService } from 'src/create-video/create-video.service';
 import type { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
-import type { MediaService } from 'src/media/media.service';
-import type {
-  CharacterCollectionItemEntity,
-  CharacterItemEntity,
-} from 'src/character-gallery/entities/character-item.entity';
+import type { VideoAssemblyService } from 'src/media/video-assembly.service';
+import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 
 describe('VideoPipeService.createVideoPipeline', () => {
   let createVideoService: { createVideoPipe: jest.Mock };
-  let mediaService: { concatNormalizedAndGetUrl: jest.Mock };
+  let videoAssemblyService: { concatNormalizedAndGetUrl: jest.Mock };
   let createVideoCacheService: { delMany: jest.Mock };
-  let characterCollectionItemRepository: { findOne: jest.Mock };
-  let characterItemRepository: { find: jest.Mock };
+  let characterCollectionReaderService: {
+    loadCollectionWithCharacters: jest.Mock;
+  };
   let service: VideoPipeService;
 
   const collection = { id: 'collection-1', style: 'noir' };
@@ -46,7 +43,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
           }),
         ),
     };
-    mediaService = {
+    videoAssemblyService = {
       concatNormalizedAndGetUrl: jest.fn().mockResolvedValue({
         url: 'https://storage.example/final.mp4',
         key: 'videos/video-pipe/final.mp4',
@@ -55,17 +52,18 @@ describe('VideoPipeService.createVideoPipeline', () => {
     createVideoCacheService = {
       delMany: jest.fn().mockResolvedValue(undefined),
     };
-    characterCollectionItemRepository = {
-      findOne: jest.fn().mockResolvedValue(collection),
+    characterCollectionReaderService = {
+      loadCollectionWithCharacters: jest.fn().mockResolvedValue({
+        collection,
+        characters,
+      }),
     };
-    characterItemRepository = { find: jest.fn().mockResolvedValue(characters) };
 
     service = new VideoPipeService(
       createVideoService as unknown as CreateVideoService,
-      mediaService as unknown as MediaService,
+      videoAssemblyService as unknown as VideoAssemblyService,
       createVideoCacheService as unknown as CreateVideoCacheService,
-      characterCollectionItemRepository as unknown as Repository<CharacterCollectionItemEntity>,
-      characterItemRepository as unknown as Repository<CharacterItemEntity>,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
     );
   });
 
@@ -74,14 +72,12 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    expect(characterCollectionItemRepository.findOne).toHaveBeenCalledTimes(1);
-    expect(characterCollectionItemRepository.findOne).toHaveBeenCalledWith({
-      where: { id: 'collection-1' },
-    });
-    expect(characterItemRepository.find).toHaveBeenCalledTimes(1);
-    expect(characterItemRepository.find).toHaveBeenCalledWith({
-      where: { collectionId: 'collection-1' },
-    });
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).toHaveBeenCalledWith('collection-1');
   });
 
   it('calls createVideoPipe once per scenario, forwarding the preloaded collection and characters', async () => {
@@ -141,10 +137,11 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    expect(mediaService.concatNormalizedAndGetUrl).toHaveBeenCalledTimes(1);
-    const [partUrls] = mediaService.concatNormalizedAndGetUrl.mock.calls[0] as [
-      string[],
-    ];
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).toHaveBeenCalledTimes(1);
+    const [partUrls] = videoAssemblyService.concatNormalizedAndGetUrl.mock
+      .calls[0] as [string[]];
     expect(partUrls).toEqual([
       'https://storage.example/s1.mp4',
       'https://storage.example/s2.mp4',
@@ -165,7 +162,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(requestData);
 
     // Assert
-    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+    const [, options] = videoAssemblyService.concatNormalizedAndGetUrl.mock
       .calls[0] as [string[], { size: { width: number; height: number } }];
     expect(options.size).toEqual({ width: 1280, height: 720 });
   });
@@ -175,7 +172,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+    const [, options] = videoAssemblyService.concatNormalizedAndGetUrl.mock
       .calls[0] as [string[], { size: { width: number; height: number } }];
     expect(options.size).toEqual({ width: 720, height: 1280 });
   });
@@ -185,7 +182,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    const [, options] = mediaService.concatNormalizedAndGetUrl.mock
+    const [, options] = videoAssemblyService.concatNormalizedAndGetUrl.mock
       .calls[0] as [string[], { keyPrefix: string }];
     expect(options.keyPrefix).toBe(VIDEO_PIPE_RESULT_KEY_PREFIX);
   });
@@ -211,7 +208,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
   it('clears the parts cache only after concat and upload have completed', async () => {
     // Arrange
     const callOrder: string[] = [];
-    mediaService.concatNormalizedAndGetUrl.mockImplementation(() => {
+    videoAssemblyService.concatNormalizedAndGetUrl.mockImplementation(() => {
       callOrder.push('concat');
       return Promise.resolve({
         url: 'https://storage.example/final.mp4',
@@ -232,7 +229,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
   it('propagates a concat/upload failure and leaves the parts cache untouched', async () => {
     // Arrange
-    mediaService.concatNormalizedAndGetUrl.mockRejectedValue(
+    videoAssemblyService.concatNormalizedAndGetUrl.mockRejectedValue(
       new Error('ffmpeg failed'),
     );
 
@@ -286,30 +283,35 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
   it('throws NotFoundException when the collection does not exist, without calling createVideoPipe/concat/delMany for any scene', async () => {
     // Arrange
-    characterCollectionItemRepository.findOne.mockResolvedValue(null);
+    characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
+      new NotFoundException('Collection not found'),
+    );
 
     // Act & Assert
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       NotFoundException,
     );
     expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
-    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
   it('throws BadRequestException when the collection has no style set, without calling createVideoPipe/concat/delMany for any scene', async () => {
     // Arrange
-    characterCollectionItemRepository.findOne.mockResolvedValue({
-      id: 'collection-1',
-      style: null,
-    });
+    characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
+      new BadRequestException('Collection has no style set'),
+    );
 
     // Act & Assert
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       BadRequestException,
     );
     expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
-    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
@@ -326,7 +328,9 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       'scene 2 failed',
     );
-    expect(mediaService.concatNormalizedAndGetUrl).not.toHaveBeenCalled();
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 });

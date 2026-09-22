@@ -2,14 +2,19 @@
  * Path escaping for ffmpeg. Isolated so MediaService stays focused on operations (SRP).
  */
 
+/** Escape backslashes, shared by the ffmpeg path-escaping helpers below. */
+function escapeBackslashes(p: string): string {
+  return p.replace(/\\/g, '\\\\');
+}
+
 /** Escape path for concat demuxer list file (single quotes). */
 export function escapePathForConcat(p: string): string {
-  return `'${p.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")}'`;
+  return `'${escapeBackslashes(p).replace(/'/g, "'\\''")}'`;
 }
 
 /** Escape path for ffmpeg filter (e.g. subtitles= path): backslash and colon. */
 export function escapePathForFilter(p: string): string {
-  return p.replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "'\\''");
+  return escapeBackslashes(p).replace(/:/g, '\\:').replace(/'/g, "'\\''");
 }
 
 /** Crop box for aspect ratio (e.g. "9:16"). Returns even dimensions for ffmpeg. */

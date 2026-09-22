@@ -16,17 +16,13 @@ jest.mock('src/ai-providers/xai/xai.service', () => ({
   XaiService: jest.fn(),
 }));
 
-import type { Repository } from 'typeorm';
 import { CreateVideoService } from './create-video.service';
 import type { CreateRequestDto } from './dto/create-video.dto';
 import type { XaiService } from 'src/ai-providers/xai/xai.service';
 import type { StorageService } from 'src/storage/storage.service';
 import type { CreateVideoCacheService } from './create-video-cache.service';
 import type { CreateVideoPromptService } from './create-video-prompt.service';
-import type {
-  CharacterCollectionItemEntity,
-  CharacterItemEntity,
-} from 'src/character-gallery/entities/character-item.entity';
+import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 
 describe('CreateVideoService.createVideoPipe', () => {
@@ -37,8 +33,9 @@ describe('CreateVideoService.createVideoPipe', () => {
   let xaiService: { generateImage: jest.Mock; generateVideo: jest.Mock };
   let storageService: { uploadGeneratedFile: jest.Mock; upload: jest.Mock };
   let createVideoCacheService: { get: jest.Mock; set: jest.Mock };
-  let characterCollectionItemRepository: { findOne: jest.Mock };
-  let characterItemRepository: { find: jest.Mock };
+  let characterCollectionReaderService: {
+    loadCollectionWithCharacters: jest.Mock;
+  };
   let service: CreateVideoService;
 
   const data: CreateRequestDto = {
@@ -73,20 +70,19 @@ describe('CreateVideoService.createVideoPipe', () => {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
     };
-    characterCollectionItemRepository = {
-      findOne: jest
-        .fn()
-        .mockResolvedValue({ id: 'collection-1', style: 'noir' }),
+    characterCollectionReaderService = {
+      loadCollectionWithCharacters: jest.fn().mockResolvedValue({
+        collection: { id: 'collection-1', style: 'noir' },
+        characters: [],
+      }),
     };
-    characterItemRepository = { find: jest.fn().mockResolvedValue([]) };
 
     service = new CreateVideoService(
       createVideoPromptService as unknown as CreateVideoPromptService,
       xaiService as unknown as XaiService,
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
-      characterCollectionItemRepository as unknown as Repository<CharacterCollectionItemEntity>,
-      characterItemRepository as unknown as Repository<CharacterItemEntity>,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
     );
   });
 
@@ -109,7 +105,7 @@ describe('CreateVideoService.createVideoPipe', () => {
     );
   });
 
-  it('returns the cached pair on a cache hit without calling repositories, DeepSeek, xAI or S3', async () => {
+  it('returns the cached pair on a cache hit without calling reader, DeepSeek, xAI or S3', async () => {
     createVideoCacheService.get.mockResolvedValue({
       sceneImageUrl: 'https://cached/image.png',
       sceneVideoUrl: 'https://cached/video.mp4',
@@ -121,8 +117,9 @@ describe('CreateVideoService.createVideoPipe', () => {
       sceneImageUrl: 'https://cached/image.png',
       sceneVideoUrl: 'https://cached/video.mp4',
     });
-    expect(characterCollectionItemRepository.findOne).not.toHaveBeenCalled();
-    expect(characterItemRepository.find).not.toHaveBeenCalled();
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).not.toHaveBeenCalled();
     expect(createVideoPromptService.buildScenePrompt).not.toHaveBeenCalled();
     expect(createVideoPromptService.buildVideoPrompt).not.toHaveBeenCalled();
     expect(xaiService.generateImage).not.toHaveBeenCalled();
@@ -282,13 +279,15 @@ describe('CreateVideoService.createVideoPipe', () => {
   it('delegates the image prompt build to the prompt service, forwarding the matched characters and style', async () => {
     // Arrange
     createVideoPromptService.buildScenePrompt.mockResolvedValue('scene prompt');
-    characterCollectionItemRepository.findOne.mockResolvedValue({
-      id: 'collection-1',
-      style: 'noir',
-    });
-    characterItemRepository.find.mockResolvedValue([
-      { name: 'Bob', imageUrl: 'https://img/bob.png' },
-    ]);
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+        },
+        characters: [{ name: 'Bob', imageUrl: 'https://img/bob.png' }],
+      },
+    );
 
     // Act
     await service.createVideoPipe({
@@ -375,7 +374,9 @@ describe('CreateVideoService.createVideoPipe', () => {
 
   it('throws NotFoundException when the collection does not exist, without generating anything', async () => {
     // Arrange
-    characterCollectionItemRepository.findOne.mockResolvedValue(null);
+    characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
+      new NotFoundException('Collection not found'),
+    );
 
     // Act & Assert
     await expect(service.createVideoPipe(data)).rejects.toThrow(
@@ -388,10 +389,9 @@ describe('CreateVideoService.createVideoPipe', () => {
 
   it('throws BadRequestException when the collection has no style set, without generating anything', async () => {
     // Arrange
-    characterCollectionItemRepository.findOne.mockResolvedValue({
-      id: 'collection-1',
-      style: null,
-    });
+    characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
+      new BadRequestException('Collection has no style set'),
+    );
 
     // Act & Assert
     await expect(service.createVideoPipe(data)).rejects.toThrow(
@@ -418,7 +418,7 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(xaiService.generateImage).not.toHaveBeenCalled();
   });
 
-  it('skips repository lookups and uses preloaded collection/characters when both are provided', async () => {
+  it('skips reader lookups and uses preloaded collection/characters when both are provided', async () => {
     // Arrange
     const preloadedCollection = { id: 'collection-1', style: 'noir' };
     const preloadedCharacters = [
@@ -434,8 +434,9 @@ describe('CreateVideoService.createVideoPipe', () => {
     });
 
     // Assert
-    expect(characterCollectionItemRepository.findOne).not.toHaveBeenCalled();
-    expect(characterItemRepository.find).not.toHaveBeenCalled();
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).not.toHaveBeenCalled();
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
       'bob walks',
       ['Bob'],

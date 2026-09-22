@@ -1,19 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { writeFile, unlink, readFile, rm, mkdir } from 'fs/promises';
+import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { randomUUID } from 'crypto';
 import { FfmpegService } from 'src/media/ffmpeg/ffmpeg.service';
 import {
-  escapePathForConcat,
   escapePathForFilter,
   computeCropForAspectRatio,
 } from 'src/media/utils/media-path.util';
-import { StorageService } from 'src/storage/storage.service';
-import { downloadBinaryToPath, isNotNullOrUndefined } from 'src/shared/utils';
-import { AppLoggerService } from 'src/shared/logger/logger.service';
+import {
+  buildConcatListContent,
+  buildNormalizedConcatArgs,
+  buildTrimArgs,
+} from 'src/media/utils/ffmpeg-args.util';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { MEDIA_CONCAT_KEY_PREFIX } from 'src/media/constants/media.constant';
+import {
+  VideoAspectRatio,
+  VIDEO_ASPECT_RATIO_DIMENSIONS,
+} from 'src/shared/constants/video-aspect-ratio';
+import { MEDIA_TEMP_ARTIFACT_NAMES } from 'src/media/constants/media.constant';
 import type {
   TrimOptions,
   TrimToShortsOptions,
@@ -23,11 +27,7 @@ import type {
 @LogMethods()
 @Injectable()
 export class MediaService {
-  constructor(
-    private readonly ffmpeg: FfmpegService,
-    private readonly storage: StorageService,
-    private readonly logger: AppLoggerService,
-  ) {}
+  constructor(private readonly ffmpeg: FfmpegService) {}
 
   /** Run ffmpeg (delegates to FfmpegService). Exposed for callers that need a one-off command. */
   async runFfmpeg(args: string[]): Promise<void> {
@@ -43,42 +43,21 @@ export class MediaService {
     options: TrimOptions,
   ): Promise<void> {
     const { startSec, endSec, durationSec, crop } = options;
-    const args: string[] = ['-y', '-i', inputPath];
 
-    // -ss before -i for fast seek (input seeking)
-    args.push('-ss', String(startSec));
-    if (isNotNullOrUndefined(endSec)) {
-      args.push('-to', String(endSec));
-    } else if (isNotNullOrUndefined(durationSec)) {
-      args.push('-t', String(durationSec));
-    }
-
+    let cropBox: ReturnType<typeof computeCropForAspectRatio> | undefined;
     if (crop?.aspectRatio) {
       const { width: iw, height: ih } =
         await this.ffmpeg.getVideoDimensions(inputPath);
-      const { cropW, cropH, cropX, cropY } = computeCropForAspectRatio(
-        iw,
-        ih,
-        crop.aspectRatio,
-      );
-      args.push('-vf', `crop=${cropW}:${cropH}:${cropX}:${cropY}`);
-    } else if (
-      isNotNullOrUndefined(crop?.width) &&
-      isNotNullOrUndefined(crop?.height)
-    ) {
-      args.push(
-        '-vf',
-        `scale=${crop.width}:${crop.height}:force_original_aspect_ratio=increase,crop=${crop.width}:${crop.height}`,
-      );
+      cropBox = computeCropForAspectRatio(iw, ih, crop.aspectRatio);
     }
 
-    args.push('-c', 'copy');
-    if (args.includes('-vf')) {
-      args.pop();
-      args.pop();
-      args.push('-c:v', 'libx264', '-c:a', 'aac');
-    }
-    args.push(outputPath);
+    const args = buildTrimArgs(inputPath, outputPath, {
+      startSec,
+      endSec,
+      durationSec,
+      crop,
+      cropBox,
+    });
     await this.ffmpeg.runFfmpeg(args);
   }
 
@@ -94,7 +73,7 @@ export class MediaService {
       startSec: options?.startSec ?? 0,
       endSec: options?.endSec,
       durationSec: options?.durationSec,
-      crop: { aspectRatio: '9:16' },
+      crop: { aspectRatio: VideoAspectRatio.Vertical },
     });
   }
 
@@ -114,10 +93,11 @@ export class MediaService {
       ]);
       return;
     }
-    const listPath = join(tmpdir(), `ffmpeg-concat-${Date.now()}.txt`);
-    const listContent = inputPaths
-      .map((p) => `file ${escapePathForConcat(p)}`)
-      .join('\n');
+    const listPath = join(
+      tmpdir(),
+      MEDIA_TEMP_ARTIFACT_NAMES.concatListFileName(Date.now()),
+    );
+    const listContent = buildConcatListContent(inputPaths);
     await writeFile(listPath, listContent, 'utf8');
     try {
       await this.ffmpeg.runFfmpeg([
@@ -147,10 +127,11 @@ export class MediaService {
     inputPaths: string[],
     outputPath: string,
   ): Promise<void> {
-    return this.concatNormalized(inputPaths, outputPath, {
-      width: 720,
-      height: 1280,
-    });
+    return this.concatNormalized(
+      inputPaths,
+      outputPath,
+      VIDEO_ASPECT_RATIO_DIMENSIONS[VideoAspectRatio.Vertical],
+    );
   }
 
   /**
@@ -168,131 +149,9 @@ export class MediaService {
       throw new Error('No videos to concatenate.');
     }
 
-    const args: string[] = ['-y'];
-    for (const p of inputPaths) {
-      args.push('-i', p);
-    }
-
-    const filterParts: string[] = [];
-    const concatInputs: string[] = [];
-    for (let i = 0; i < inputPaths.length; i++) {
-      filterParts.push(
-        `[${i}:v:0]scale=${size.width}:${size.height}:force_original_aspect_ratio=decrease,pad=${size.width}:${size.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24,format=yuv420p[v${i}]`,
-        `[${i}:a:0]aresample=async=1:first_pts=0[a${i}]`,
-      );
-      concatInputs.push(`[v${i}][a${i}]`);
-    }
-    filterParts.push(
-      `${concatInputs.join('')}concat=n=${inputPaths.length}:v=1:a=1[v][a]`,
+    await this.ffmpeg.runFfmpeg(
+      buildNormalizedConcatArgs(inputPaths, outputPath, size),
     );
-
-    await this.ffmpeg.runFfmpeg([
-      ...args,
-      '-filter_complex',
-      filterParts.join(';'),
-      '-map',
-      '[v]',
-      '-map',
-      '[a]',
-      '-c:v',
-      'libx264',
-      '-preset',
-      'veryfast',
-      '-crf',
-      '20',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '192k',
-      '-movflags',
-      '+faststart',
-      outputPath,
-    ]);
-  }
-
-  /**
-   * Download videos from URLs, concat them, upload result to storage, return public URL.
-   * Intermediate files live only in tmpdir and are cleaned up after upload.
-   */
-  async concatAndGetUrl(
-    inputUrls: string[],
-  ): Promise<{ url: string; key: string }> {
-    const requestId = randomUUID();
-    const tempDir = join(tmpdir(), `concat-${requestId}`);
-    await mkdir(tempDir, { recursive: true });
-
-    try {
-      this.logger.log(
-        `[concat-and-get-url] Downloading ${inputUrls.length} video(s) to ${tempDir}`,
-      );
-      const partPaths = await Promise.all(
-        inputUrls.map((url, i) => {
-          const partPath = join(tempDir, `part-${i}.mp4`);
-          return downloadBinaryToPath(url, partPath).then(() => partPath);
-        }),
-      );
-
-      const resultPath = join(tempDir, 'result.mp4');
-      this.logger.log(`[concat-and-get-url] Concatenating to ${resultPath}`);
-      await this.concat(partPaths, resultPath);
-
-      const buffer = await readFile(resultPath);
-      const key = `${MEDIA_CONCAT_KEY_PREFIX}/${requestId}.mp4`;
-      this.logger.log(`[concat-and-get-url] Uploading to storage key="${key}"`);
-      const uploaded = await this.storage.upload(key, buffer, 'video/mp4');
-
-      return { url: uploaded.url, key: uploaded.key };
-    } finally {
-      await rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    }
-  }
-
-  async concatNormalizedVerticalAndGetUrl(
-    inputUrls: string[],
-  ): Promise<{ url: string; key: string }> {
-    return this.concatNormalizedAndGetUrl(inputUrls, {
-      size: { width: 720, height: 1280 },
-      keyPrefix: MEDIA_CONCAT_KEY_PREFIX,
-    });
-  }
-
-  /**
-   * Download videos from URLs, concat them normalized to the given size, upload the
-   * result to storage under `<keyPrefix>/<requestId>.mp4`, return public URL and key.
-   * Intermediate files live only in tmpdir and are cleaned up after upload.
-   */
-  async concatNormalizedAndGetUrl(
-    inputUrls: string[],
-    options: { size: { width: number; height: number }; keyPrefix: string },
-  ): Promise<{ url: string; key: string }> {
-    const requestId = randomUUID();
-    const tempDir = join(tmpdir(), `concat-${requestId}`);
-    await mkdir(tempDir, { recursive: true });
-
-    try {
-      this.logger.log(
-        `[concat-normalized] Downloading ${inputUrls.length} video(s) to ${tempDir}`,
-      );
-      const partPaths = await Promise.all(
-        inputUrls.map((url, i) => {
-          const partPath = join(tempDir, `part-${i}.mp4`);
-          return downloadBinaryToPath(url, partPath).then(() => partPath);
-        }),
-      );
-
-      const resultPath = join(tempDir, 'result.mp4');
-      this.logger.log(`[concat-normalized] Concatenating to ${resultPath}`);
-      await this.concatNormalized(partPaths, resultPath, options.size);
-
-      const buffer = await readFile(resultPath);
-      const key = `${options.keyPrefix}/${requestId}.mp4`;
-      this.logger.log(`[concat-normalized] Uploading to storage key="${key}"`);
-      const uploaded = await this.storage.upload(key, buffer, 'video/mp4');
-
-      return { url: uploaded.url, key: uploaded.key };
-    } finally {
-      await rm(tempDir, { recursive: true, force: true }).catch(() => {});
-    }
   }
 
   /**

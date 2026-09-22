@@ -1,6 +1,6 @@
 # Модель данных
 
-Три таблицы Postgres, которые создаёт `autoLoadEntities` + `synchronize` (см. «Схема БД» ниже). Связь между
+Две таблицы Postgres, которые создаёт `autoLoadEntities` + `synchronize` (см. «Схема БД» ниже). Связь между
 коллекцией и персонажем логическая, без внешнего ключа на уровне схемы.
 
 ```mermaid
@@ -22,20 +22,6 @@ erDiagram
         text description "nullable, исходный prompt"
         varchar style "nullable"
         varchar collectionId "nullable"
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    GENERATION_ITEMS {
-        uuid id PK
-        enum status "GenereationItemStatus, default WAITING_START"
-        varchar currentStep "nullable"
-        jsonb input
-        text script "nullable"
-        text audioUrl "nullable"
-        text videoUrl "nullable"
-        varchar videoStorageKey "nullable"
-        jsonb error "nullable, step/message/occurredAt"
         timestamp createdAt
         timestamp updatedAt
     }
@@ -70,42 +56,6 @@ erDiagram
 | `collectionId` | `varchar` | да |
 | `createdAt` | `timestamp` | нет |
 | `updatedAt` | `timestamp` | нет |
-
-### `GenerationItemEntity`
-
-Путь: `src/generations/generation-item/entities/generation-item.entity.ts`. Таблица: `generation_items`.
-
-| Колонка | Тип | Nullable |
-|---|---|---|
-| `id` | `uuid` (PK, generated) | нет |
-| `status` | `enum GenereationItemStatus`, default `WAITING_START` | нет |
-| `currentStep` | `varchar` | да |
-| `input` | `jsonb` | нет |
-| `script` | `text` | да |
-| `audioUrl` | `text` | да |
-| `videoUrl` | `text` | да |
-| `videoStorageKey` | `varchar(512)` | да |
-| `error` | `jsonb` (`{ step, message, occurredAt }`) | да |
-| `createdAt` | `timestamp` | нет |
-| `updatedAt` | `timestamp` | нет |
-
-## Статусы generation item
-
-`GenereationItemStatus` (`src/shared/constants/generation-item.ts`) — имя enum содержит опечатку
-(`Genereation` вместо `Generation`), она сохранена намеренно (см. `AGENTS.md`, «не чинить молча»).
-Значения:
-
-| Имя в enum | Значение |
-|---|---|
-| `Pending` | `PENDING` |
-| `Running` | `RUNNING` |
-| `Failed` | `FAILED` |
-| `Completed` | `COMPLETED` |
-| `WaitingStart` | `WAITING_START` (дефолт колонки `status`) |
-
-На сегодня статусы нигде в коде не переключаются: `GenerationItemService.create` только сохраняет запись со
-статусом из DTO (или дефолтным `WAITING_START`), а `CreateVideoService` (реальный конвейер) вообще не
-обращается к таблице `generation_items`. Подробнее — [`known-issues.md`](./known-issues.md).
 
 ## Схема БД
 

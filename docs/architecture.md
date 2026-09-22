@@ -24,8 +24,7 @@ flowchart TD
 
     subgraph Domain["Доменные модули"]
         CreateVideo["CreateVideoModule<br/>CreateVideoService,<br/>CreateVideoCacheService"]
-        Gallery["CharacterGalleryModule<br/>CharacterGalleryService"]
-        GenItem["GenerationItemModule<br/>GenerationItemService"]
+        Gallery["CharacterGalleryModule<br/>CharacterGalleryService,<br/>CharacterImageService,<br/>CharacterCollectionReaderService"]
     end
 
     Main --> App
@@ -38,13 +37,12 @@ flowchart TD
     App --> Xai
     App --> CreateVideo
     App --> Gallery
-    App --> GenItem
 
     CreateVideo --> DeepSeek
     CreateVideo --> Xai
     CreateVideo --> Storage
     CreateVideo --> Redis
-    CreateVideo -.->|репозитории сущностей| Gallery
+    CreateVideo -.->|CharacterCollectionReaderService| Gallery
 
     Gallery --> Xai
     Gallery --> Storage
@@ -54,7 +52,6 @@ flowchart TD
     Logger -.->|@LogMethods| DeepSeek
     Logger -.->|@LogMethods| Xai
     Logger -.->|@LogMethods| Storage
-    Logger -.->|@LogMethods| GenItem
 ```
 
 ## Модули
@@ -68,8 +65,7 @@ flowchart TD
 | `DeepSeekModule` | `src/ai-providers/deepseek/deepseek.module.ts` | `DeepSeekService.generate` — генерация текста через DeepSeek, `DeepSeekController` (`POST /deepseek/generate`) |
 | `XaiModule` | `src/ai-providers/xai/xai.module.ts` | `XaiService` — текст/изображение/видео через xAI Grok Imagine, контроллеры `XaiTextController`, `XaiImageController` |
 | `CreateVideoModule` | `src/create-video/create-video.module.ts` | `CreateVideoService` (конвейер создания видео), `CreateVideoCacheService` (кэш в Redis), `CreateVideoController` (`POST /create-video/create`) |
-| `CharacterGalleryModule` | `src/character-gallery/character-gallery.module.ts` | `CharacterGalleryService` — создание персонажей и коллекций персонажей, `CharacterGalleryController` |
-| `GenerationItemModule` | `src/generations/generation-item/generation-item.module.ts` | `GenerationItemService` — заготовка под асинхронный конвейер (см. `data-model.md`, `known-issues.md`), `GenerationItemController` (`POST /generation-item/create`) |
+| `CharacterGalleryModule` | `src/character-gallery/character-gallery.module.ts` | `CharacterGalleryService` — персистенция персонажей/коллекций и разрешение стиля, `CharacterImageService` — генерация изображения персонажа (промпт → xAI → `StorageService`), `CharacterCollectionReaderService` — загрузка коллекции с персонажами (экспортируется, используется `CreateVideoModule`/`VideoPipeModule`), `CharacterGalleryController` |
 
 ## `src/main.ts`
 
@@ -86,7 +82,12 @@ true }` (незадекларированные поля тела запроса
   `src/app.module.ts` — исключение, он читает `DATABASE_*` и `NODE_ENV` из `process.env` напрямую в вызове
   `TypeOrmModule.forRoot`.
 - **Сквозные константы и enum** — живут в `src/shared/constants/` (`config.ts`, `logger.ts`,
-  `generation-item.ts`, `character-style.ts`, `deepseek.ts`, `xai.ts`), а не разбросаны по entity/сервисам.
+  `character-style.ts`, `deepseek.ts`, `xai.ts`, `video-aspect-ratio.ts`, `video-duration.ts`), а не
+  разбросаны по entity/сервисам. Модуль-локальные константы — в `<module>/constants/` (например
+  `src/media/constants/media.constant.ts`, `src/character-gallery/constants/character-gallery.constant.ts`).
+- **Чистые функции** — переиспользуемая чистая логика (без ФС/сети/`this`) выносится в `<module>/utils/`
+  (например `src/media/utils/ffmpeg-args.util.ts`) или в `src/shared/utils/` (например `withTempDir`,
+  `extensionFromMediaType`), если нужна нескольким модулям.
 - **Логирование новых сервисов** — класс сервиса помечается `@LogMethods()` (см. `logging.md`).
 - **Исходящие вызовы** — новый вызов внешнего API/хранилища/кэша оборачивается в
   `AppLoggerService.trackExternalCall(...)`.

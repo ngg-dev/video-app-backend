@@ -9,6 +9,7 @@ import {
   CREATE_VIDEO_URL_KEY_PREFIX,
   CREATE_VIDEO_URL_TTL_SECONDS,
 } from './constants/video-url-storage.constant';
+import { normalizeScenario } from './utils/scenario.util';
 
 @LogMethods()
 @Injectable()
@@ -20,7 +21,7 @@ export class CreateVideoCacheService {
 
   buildKey(scenario: string, collectionId: string): string {
     const hash = createHash('sha256')
-      .update(`${scenario.toLowerCase()}|${collectionId}`)
+      .update(`${normalizeScenario(scenario)}|${collectionId}`)
       .digest('hex');
 
     return `${CREATE_VIDEO_URL_KEY_PREFIX}${hash}`;

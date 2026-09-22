@@ -14,7 +14,6 @@
 | POST | `/create-video/create` | `CreateVideoController.creaate` | `CreateRequestDto`: `scenario` (строка, 1..100000), `collectionId` (строка) | `CreateVideoResponseDto`: `{ sceneImageUrl, sceneVideoUrl }` |
 | POST | `/character-gallery/create` | `CharacterGalleryController.createCharacter` | `CreateCharacterDto`: `name` (≤255), `prompt` (≤100000), `style?` (строка, ≤255), `collectionId?` | `CharacterItemEntity` |
 | POST | `/character-gallery/collection/create` | `CharacterGalleryController.createCharacterCollection` | `CreateCharacterCollectionDto`: `name` (≤255), `style?` (enum `CharacterStyle`: `anime`, `pixar3d`) | `CharacterCollectionItemEntity` |
-| POST | `/generation-item/create` | `GenerationItemController.createItem` | `CreateGenerationItemDto`: `status?` (enum `GenereationItemStatus`) | `GenerationItemEntity` |
 | POST | `/storage/upload` | `StorageController.upload` | multipart/form-data, поле `file`; query `prefix?` (по умолчанию `images/`, должен соответствовать `/^[a-z0-9/_-]+$/i`, иначе используется дефолт) | `UploadResponseDto`: `{ message, url, key, etag? }` |
 | POST | `/deepseek/generate` | `DeepSeekController.gerenatete` | `GenerateRequestDto`: `prompt` (строка, ≤100000) | `GenerateResponsetDto`: `{ message }` |
 | POST | `/xai/text/generate` | `XaiTextController.generate` | `GenerateTextRequestDto`: `prompt` (строка, ≤100000) | `GenerateTextResponseDto`: `{ message }` |
@@ -101,5 +100,3 @@
 - Ограничения длины полей заданы декораторами `class-validator` прямо в DTO (см. таблицу выше:
   `@MaxLength`, `@IsNotEmpty`, `@IsOptional`).
 - Enum `CharacterStyle` (`src/shared/constants/character-style.ts`): `anime`, `pixar3d`.
-- Enum `GenereationItemStatus` (`src/shared/constants/generation-item.ts`, имя с сознательно сохранённой
-  опечаткой): `PENDING`, `RUNNING`, `FAILED`, `COMPLETED`, `WAITING_START`.

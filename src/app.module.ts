@@ -4,7 +4,6 @@ import { AppService } from './app.service';
 import { DeepSeekModule } from './ai-providers/deepseek/deepseek.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { GenerationItemModule } from './generations/generation-item/generation-item.module';
 import { RedisModule } from './database/redis/redis.module';
 import { XaiModule } from './ai-providers/xai/xai.module';
 import { CreateVideoModule } from './create-video/create-video.module';
@@ -32,7 +31,6 @@ import { MediaModule } from './media/media.module';
       verboseRetryLog: true,
     }),
     DeepSeekModule,
-    GenerationItemModule,
     RedisModule,
     XaiModule,
     CreateVideoModule,

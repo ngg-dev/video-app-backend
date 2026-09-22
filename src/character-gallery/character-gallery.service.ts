@@ -1,21 +1,14 @@
-import { randomUUID } from 'node:crypto';
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { XaiService } from 'src/ai-providers/xai/xai.service';
-import { StorageService } from 'src/storage/storage.service';
 import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
 } from './entities/character-item.entity';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { CreateCharacterCollectionDto } from './dto/character-collection.dto';
-import { buildCharacterTurnaroundPrompt } from './utils/character-image-prompt.util';
+import { CharacterImageService } from './character-image.service';
 
 @Injectable()
 @LogMethods()
@@ -25,28 +18,15 @@ export class CharacterGalleryService {
     private readonly characterItemRepository: Repository<CharacterItemEntity>,
     @InjectRepository(CharacterCollectionItemEntity)
     private readonly characterCollectionItemRepository: Repository<CharacterCollectionItemEntity>,
-    private readonly xaiService: XaiService,
-    private readonly storageService: StorageService,
+    private readonly characterImageService: CharacterImageService,
   ) {}
 
   async createCharacter(dto: CreateCharacterDto): Promise<CharacterItemEntity> {
     const { name, prompt, style: dtoStyle, collectionId } = dto;
     const style = await this.resolveCharacterStyle(dtoStyle, collectionId);
-    const imagePrompt = buildCharacterTurnaroundPrompt(prompt, style);
-    const image = await this.xaiService.generateImage({ prompt: imagePrompt });
-
-    if (!image) {
-      throw new InternalServerErrorException(
-        'Character image generation failed.',
-      );
-    }
-
-    const extension = image.mediaType?.split('/')[1] ?? 'png';
-    const key = `characters/${Date.now()}-${randomUUID()}.${extension}`;
-    const { url } = await this.storageService.upload(
-      key,
-      Buffer.from(image.uint8Array),
-      image.mediaType,
+    const imageUrl = await this.characterImageService.generateCharacterImage(
+      prompt,
+      style,
     );
 
     const entity = this.characterItemRepository.create({
@@ -54,7 +34,7 @@ export class CharacterGalleryService {
       description: prompt,
       style,
       collectionId: collectionId ?? null,
-      imageUrl: url,
+      imageUrl,
     });
 
     return this.characterItemRepository.save(entity);

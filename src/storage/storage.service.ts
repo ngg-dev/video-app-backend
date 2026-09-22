@@ -8,6 +8,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
+import { extensionFromMediaType } from 'src/shared/utils';
 import { S3_CLIENT } from './utils/s3-client';
 import {
   STORAGE_BUCKET,
@@ -54,7 +55,7 @@ export class StorageService {
     prefix: string,
     fallbackExtension = 'png',
   ): Promise<UploadResult> {
-    const extension = file.mediaType?.split('/')[1] ?? fallbackExtension;
+    const extension = extensionFromMediaType(file.mediaType, fallbackExtension);
     const key = `${prefix}/${Date.now()}-${randomUUID()}.${extension}`;
 
     return this.upload(key, Buffer.from(file.uint8Array), file.mediaType);

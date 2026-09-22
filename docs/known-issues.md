@@ -2,8 +2,7 @@
 
 Перечисленные ниже пункты — находки по коду на момент написания документации. Ни один из них в рамках
 этой документации не исправлен в коде: описание опечаток в публичных именах (см. п. 4) намеренно не
-превращается в правку — `AGENTS.md` прямо требует сохранять `GenereationItemStatus` как есть, а не «чинить»
-молча.
+превращается в правку — `AGENTS.md` прямо требует не «чинить» такие вещи молча.
 
 ## 1. `ioredis` не объявлен в `package.json`, но используется — главная проблема
 
@@ -27,10 +26,14 @@ Redis`, при этом `ioredis` отсутствует и в `dependencies`, �
 
 **Где.** `AGENTS.md` (раздел Notes), `src/app.module.ts`.
 
-**Последствие.** На текущем коде это уже не так: `src/app.module.ts` импортирует `GenerationItemModule` из
-`./generations/generation-item/generation-item.module`, путь корректный, `npm run typecheck` проходит.
+**Последствие.** Расхождение с кодом усилилось: раньше `AppModule` действительно импортировал generation-
+модуль (`GenerationItemModule`, просто по другому пути, чем в заметке), а теперь, после удаления
+`src/generations/generation-item/` как неиспользуемого кода (см. TL-REQ/TL-PLAN
+`service-split-and-cleanup`), `AppModule` вообще не импортирует ни одного generation-модуля.
+`npm run typecheck` проходит.
 
-**Статус.** Устаревшая пометка, а не живая проблема; сам `AGENTS.md` в этой задаче не редактируется.
+**Статус.** Устаревшая пометка, а не живая проблема; сам `AGENTS.md` в этой задаче не редактируется (правка
+вне рамок — см. `PLAN-service-split-and-cleanup.md`).
 
 ## 3. `npm run test:e2e` не работает
 
@@ -48,37 +51,18 @@ format` и `npm run lint` тоже включают маску `test/**/*.ts` в
 
 **Что.** В коде есть несколько опечаток в публичных именах:
 
-- `GenereationItemStatus` (`src/shared/constants/generation-item.ts`) — имя enum;
 - `creaate` (`src/create-video/create-video.controller.ts`) — имя метода контроллера;
 - `gerenatete` и `GenerateResponsetDto` (`src/ai-providers/deepseek/deepseek.controller.ts`,
   `src/ai-providers/deepseek/dto/deepseek.dto.ts`) — имя метода контроллера и DTO;
-- `characterСollectiorItemRepository` (`src/create-video/create-video.service.ts`) — приватное поле
-  сервиса (кириллическая «С» в имени).
 
 **Где.** См. пути выше.
 
 **Последствие.** На HTTP-контракт эти опечатки не влияют (роуты и JSON-поля от них не зависят), но
 усложняют чтение и грепинг кода.
 
-**Статус.** Сознательно не исправлено. `AGENTS.md` прямо требует не «исправлять» `GenereationItemStatus`
-молча — этот принцип распространён здесь на все перечисленные опечатки.
+**Статус.** Сознательно не исправлено. `AGENTS.md` прямо требует не «исправлять» подобные вещи молча.
 
-## 5. `GenerationItemModule` — заготовка, статусы нигде не переключаются
-
-**Что.** `GenerationItemEntity` описывает полноценную асинхронную работу генерации (`status`,
-`currentStep`, `script`, `audioUrl`, `videoUrl`, `videoStorageKey`, `error`), но
-`GenerationItemService` умеет только `create`, а `CreateVideoService` — реальный конвейер — в эту таблицу
-вообще ничего не пишет.
-
-**Где.** `src/generations/generation-item/`, `src/create-video/create-video.service.ts`.
-
-**Последствие.** Значения `GenereationItemStatus` (`PENDING`, `RUNNING`, `FAILED`, `COMPLETED`,
-`WAITING_START`) нигде в приложении не меняются после создания записи — модуль существует отдельно от
-реального конвейера.
-
-**Статус.** Заготовка под будущую функциональность, не завершена.
-
-## 6. Конвейер создания видео синхронный и долгий
+## 5. Конвейер создания видео синхронный и долгий
 
 **Что.** `POST /create-video/create` внутри одного HTTP-запроса делает два вызова DeepSeek, генерацию
 изображения через xAI, загрузку в S3 и генерацию видео через xAI — последовательно.
@@ -90,7 +74,7 @@ format` и `npm run lint` тоже включают маску `test/**/*.ts` в
 
 **Статус.** Известное архитектурное ограничение, см. [`flows.md`](./flows.md), раздел «Синхронность».
 
-## 7. Видео сцены не сохраняется в собственное хранилище
+## 6. Видео сцены не сохраняется в собственное хранилище
 
 **Что.** `POST /create-video/create` возвращает `sceneVideoUrl`, полученный из
 `providerMetadata.xai.videoUrl` — это ссылка самого провайдера xAI, а не файл в S3-совместимом хранилище
@@ -104,7 +88,7 @@ TTL `3600` секунд (`CREATE_VIDEO_URL_TTL_SECONDS`), что соответ�
 
 **Статус.** Текущее поведение, зафиксировано как есть.
 
-## 8. Кэш конвейера: ключ, префикс, деградация при ошибке Redis
+## 7. Кэш конвейера: ключ, префикс, деградация при ошибке Redis
 
 **Что.** `CreateVideoCacheService` ключует запись по `sha256(scenario.toLowerCase() + '|' +
 collectionId)` с префиксом `create-video:video-url:`. При ошибке Redis (`get` или `set`) исключение
@@ -118,10 +102,11 @@ collectionId)` с префиксом `create-video:video-url:`. При ошиб�
 
 **Статус.** Осознанное поведение (деградация без падения), не баг.
 
-## 9. Расхождение моделей в `XaiService.generateImage`
+## 8. Расхождение моделей в `XaiService.generateImage`
 
 **Что.** Параметр `model` (по умолчанию `xaiModels.grok4`) в вызов генерации изображения не передаётся:
-модель захардкожена как `xai.image('grok-imagine-image-2.0')`, и используется импортированный синглтон
+модель зафиксирована как `xai.image(xaiImageModels.grokImagineImage20)` (константа в
+`src/shared/constants/xai.ts`, но сам вызов не параметризован), и используется импортированный синглтон
 `xai` из `@ai-sdk/xai`, а не сконфигурированный ключом `this.xaiSource` (`createXai({ apiKey: XAI_API_KEY
 })`).
 
@@ -133,7 +118,7 @@ collectionId)` с префиксом `create-video:video-url:`. При ошиб�
 
 **Статус.** Не исправлено, вне рамок этой задачи.
 
-## 10. `SCENARIO_GENERATE_PROMPT` объявлен, но не используется
+## 9. `SCENARIO_GENERATE_PROMPT` объявлен, но не используется
 
 **Что.** `src/shared/constants/create-video.ts` содержит большой промпт генерации сценария на русском
 языке, но нигде в коде не импортируется и не используется.
@@ -145,7 +130,7 @@ collectionId)` с префиксом `create-video:video-url:`. При ошиб�
 
 **Статус.** Не используется, не удалён.
 
-## 11. `synchronize: NODE_ENV !== 'production'`, миграций нет
+## 10. `synchronize: NODE_ENV !== 'production'`, миграций нет
 
 **Что.** `TypeOrmModule.forRoot` в `src/app.module.ts` настроен с `synchronize: process.env.NODE_ENV !==
 'production'`: вне production схема Postgres накатывается автоматически из сущностей при каждом старте
@@ -159,7 +144,7 @@ production (`synchronize: false`) и вне production отличается, ч�
 
 **Статус.** Известное ограничение, см. также [`data-model.md`](./data-model.md), раздел «Схема БД».
 
-## 12. Отсутствие `.env.example` и полного списка переменных в репозитории
+## 11. Отсутствие `.env.example` и полного списка переменных в репозитории
 
 **Что.** В репозитории нет файла `.env.example`, при этом приложению нужно 18 переменных окружения (см.
 [`development.md`](./development.md)), часть из которых (`DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`,

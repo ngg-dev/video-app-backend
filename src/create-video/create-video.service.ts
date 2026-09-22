@@ -1,19 +1,18 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   CreateRequestDto,
   CreateVideoResponseDto,
 } from './dto/create-video.dto';
 import { XaiService } from 'src/ai-providers/xai/xai.service';
 import { StorageService } from 'src/storage/storage.service';
-import { Repository } from 'typeorm';
+import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 import {
-  CharacterCollectionItemEntity,
-  CharacterItemEntity,
-} from 'src/character-gallery/entities/character-item.entity';
-import { assertCollectionHasStyle } from 'src/character-gallery/utils/character-collection.util';
+  assertCollectionHasStyle,
+  selectMentionedCharacters,
+} from 'src/character-gallery/utils/character-collection.util';
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
+import { normalizeScenario } from './utils/scenario.util';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
 import { isNotUndefined } from 'src/shared/utils';
@@ -25,16 +24,13 @@ export class CreateVideoService {
     private readonly xaiService: XaiService,
     private readonly storageService: StorageService,
     private readonly createVideoCacheService: CreateVideoCacheService,
-    @InjectRepository(CharacterCollectionItemEntity)
-    private readonly characterСollectiorItemRepository: Repository<CharacterCollectionItemEntity>,
-    @InjectRepository(CharacterItemEntity)
-    private readonly characterItemRepository: Repository<CharacterItemEntity>,
+    private readonly characterCollectionReaderService: CharacterCollectionReaderService,
   ) {}
 
   async createVideoPipe(
     data: CreateRequestDto,
   ): Promise<CreateVideoResponseDto> {
-    const scenario = data?.scenario.toLowerCase();
+    const scenario = normalizeScenario(data.scenario);
     const collectionId = data?.collectionId;
     const aspectRatio = data?.aspectRatio ?? DEFAULT_VIDEO_ASPECT_RATIO;
     const duration = data?.duration ?? DEFAULT_VIDEO_DURATION_SECONDS;
@@ -48,26 +44,20 @@ export class CreateVideoService {
       return cached;
     }
 
-    const [collection, collectionCharacters] =
-      isNotUndefined(data.collection) && isNotUndefined(data.characters)
-        ? [data.collection, data.characters]
-        : await Promise.all([
-            this.characterСollectiorItemRepository.findOne({
-              where: { id: collectionId },
-            }),
-            this.characterItemRepository.find({
-              where: {
-                collectionId: collectionId,
-              },
-            }),
-          ]);
+    let collection = data.collection;
+    let collectionCharacters = data.characters;
 
-    assertCollectionHasStyle(collection);
+    if (isNotUndefined(collection) && isNotUndefined(collectionCharacters)) {
+      assertCollectionHasStyle(collection);
+    } else {
+      ({ collection, characters: collectionCharacters } =
+        await this.characterCollectionReaderService.loadCollectionWithCharacters(
+          collectionId,
+        ));
+    }
 
-    const collectionPersons = collectionCharacters.filter(({ name }) =>
-      scenario.includes(name.toLowerCase()),
-    );
-    const referenceImages = collectionPersons.map((el) => el.imageUrl || '');
+    const { persons: collectionPersons, referenceImages } =
+      selectMentionedCharacters(scenario, collectionCharacters);
 
     const scenePrompt = await this.createVideoPromptService.buildScenePrompt(
       scenario,

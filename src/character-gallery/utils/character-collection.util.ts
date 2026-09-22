@@ -1,5 +1,8 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { CharacterCollectionItemEntity } from '../entities/character-item.entity';
+import {
+  CharacterCollectionItemEntity,
+  CharacterItemEntity,
+} from '../entities/character-item.entity';
 
 /**
  * Every generated scene must share one visual style, and that style can only
@@ -18,4 +21,21 @@ export function assertCollectionHasStyle(
       'Character collection has no style set. Set a style on the collection so every generated scene shares the same visual style.',
     );
   }
+}
+
+/**
+ * Pick the characters mentioned by name in a (already normalized/lowercased) scenario, and
+ * collect their reference images in the same order — falling back to `''` when a mentioned
+ * character has no image.
+ */
+export function selectMentionedCharacters(
+  scenario: string,
+  characters: CharacterItemEntity[],
+): { persons: CharacterItemEntity[]; referenceImages: string[] } {
+  const persons = characters.filter(({ name }) =>
+    scenario.includes(name.toLowerCase()),
+  );
+  const referenceImages = persons.map((person) => person.imageUrl || '');
+
+  return { persons, referenceImages };
 }

@@ -4,6 +4,8 @@ import { XaiModule } from 'src/ai-providers/xai/xai.module';
 import { StorageModule } from 'src/storage/storage.module';
 import { CharacterGalleryController } from './character-gallery.controller';
 import { CharacterGalleryService } from './character-gallery.service';
+import { CharacterCollectionReaderService } from './character-collection-reader.service';
+import { CharacterImageService } from './character-image.service';
 import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
@@ -19,6 +21,11 @@ import {
     StorageModule,
   ],
   controllers: [CharacterGalleryController],
-  providers: [CharacterGalleryService],
+  providers: [
+    CharacterGalleryService,
+    CharacterCollectionReaderService,
+    CharacterImageService,
+  ],
+  exports: [CharacterCollectionReaderService],
 })
 export class CharacterGalleryModule {}

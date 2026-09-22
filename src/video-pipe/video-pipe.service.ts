@@ -1,16 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { CreateVideoService } from 'src/create-video/create-video.service';
 import { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
 import { CreateRequestDto } from 'src/create-video/dto/create-video.dto';
-import { MediaService } from 'src/media/media.service';
-import {
-  CharacterCollectionItemEntity,
-  CharacterItemEntity,
-} from 'src/character-gallery/entities/character-item.entity';
-import { assertCollectionHasStyle } from 'src/character-gallery/utils/character-collection.util';
+import { VideoAssemblyService } from 'src/media/video-assembly.service';
+import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 import {
   DEFAULT_VIDEO_ASPECT_RATIO,
   VIDEO_ASPECT_RATIO_DIMENSIONS,
@@ -27,12 +21,9 @@ import {
 export class VideoPipeService {
   constructor(
     private readonly createVideoService: CreateVideoService,
-    private readonly mediaService: MediaService,
+    private readonly videoAssemblyService: VideoAssemblyService,
     private readonly createVideoCacheService: CreateVideoCacheService,
-    @InjectRepository(CharacterCollectionItemEntity)
-    private readonly characterCollectionItemRepository: Repository<CharacterCollectionItemEntity>,
-    @InjectRepository(CharacterItemEntity)
-    private readonly characterItemRepository: Repository<CharacterItemEntity>,
+    private readonly characterCollectionReaderService: CharacterCollectionReaderService,
   ) {}
 
   async createVideoPipeline(
@@ -41,16 +32,10 @@ export class VideoPipeService {
     const { scenarios, collectionId } = data;
     const aspectRatio = data.aspectRatio ?? DEFAULT_VIDEO_ASPECT_RATIO;
 
-    const [collection, characters] = await Promise.all([
-      this.characterCollectionItemRepository.findOne({
-        where: { id: collectionId },
-      }),
-      this.characterItemRepository.find({
-        where: { collectionId },
-      }),
-    ]);
-
-    assertCollectionHasStyle(collection);
+    const { collection, characters } =
+      await this.characterCollectionReaderService.loadCollectionWithCharacters(
+        collectionId,
+      );
 
     const scenes = await Promise.all(
       scenarios.map((scenario) => {
@@ -68,7 +53,7 @@ export class VideoPipeService {
     );
 
     const partUrls = scenes.map((scene) => scene.sceneVideoUrl);
-    const { url } = await this.mediaService.concatNormalizedAndGetUrl(
+    const { url } = await this.videoAssemblyService.concatNormalizedAndGetUrl(
       partUrls,
       {
         size: VIDEO_ASPECT_RATIO_DIMENSIONS[aspectRatio],
