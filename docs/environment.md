@@ -37,8 +37,6 @@
 
 - `CREATE_VIDEO_URL_TTL_SECONDS = 3600` — TTL кэша сцены в Redis
   (`src/create-video/constants/video-url-storage.constant.ts`).
-- `VIDEO_PIPE_SCENE_COUNT = 5` — сколько сценариев обязан прислать `POST /video-pipe/create`
-  (`src/video-pipe/constants/video-pipe.constant.ts`).
 - `MIN_VIDEO_DURATION_SECONDS = 1`, `MAX_VIDEO_DURATION_SECONDS = 15`,
   `DEFAULT_VIDEO_DURATION_SECONDS = 5` (`src/shared/constants/video-duration.ts`).
 - `DEFAULT_VIDEO_ASPECT_RATIO = '9:16'`, размеры по aspect ratio
