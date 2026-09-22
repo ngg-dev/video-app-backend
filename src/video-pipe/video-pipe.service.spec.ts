@@ -333,4 +333,141 @@ describe('VideoPipeService.createVideoPipeline', () => {
     ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
+
+  describe('Test 7: createVideoPipe called N times in scenario order for N ≠ 5', () => {
+    it.each([1, 2, 7])(
+      'calls createVideoPipe %d time(s) for %d scenario(s)',
+      async (n: number) => {
+        // Arrange
+        const scenarios = Array.from({ length: n }, (_, i) => `s${i + 1}`);
+        const requestData: VideoPipeRequestDto = {
+          scenarios,
+          collectionId: 'collection-1',
+        };
+
+        // Act
+        await service.createVideoPipeline(requestData);
+
+        // Assert
+        expect(createVideoService.createVideoPipe).toHaveBeenCalledTimes(n);
+        for (const [index, scenario] of scenarios.entries()) {
+          expect(createVideoService.createVideoPipe).toHaveBeenNthCalledWith(
+            index + 1,
+            {
+              scenario,
+              collectionId: 'collection-1',
+              aspectRatio: '9:16',
+              duration: 5,
+              collection,
+              characters,
+            },
+          );
+        }
+      },
+    );
+  });
+
+  describe('Test 8: Exactly N parts go to concat in scenario order for N ≠ 5', () => {
+    it.each([1, 2, 7])(
+      'sends %d part(s) to concat for %d scenario(s)',
+      async (n: number) => {
+        // Arrange
+        const scenarios = Array.from({ length: n }, (_, i) => `s${i + 1}`);
+        const requestData: VideoPipeRequestDto = {
+          scenarios,
+          collectionId: 'collection-1',
+        };
+
+        // Act
+        await service.createVideoPipeline(requestData);
+
+        // Assert
+        expect(
+          videoAssemblyService.concatNormalizedAndGetUrl,
+        ).toHaveBeenCalledTimes(1);
+        const [partUrls] = videoAssemblyService.concatNormalizedAndGetUrl.mock
+          .calls[0] as [string[]];
+        const expectedUrls = scenarios.map(
+          (s) => `https://storage.example/${s}.mp4`,
+        );
+        expect(partUrls).toEqual(expectedUrls);
+        expect(partUrls).toHaveLength(n);
+      },
+    );
+  });
+
+  describe('Test 9: Part order preserved for N = 7 even with reverse completion order', () => {
+    it('preserves scenario order when parts resolve out of order', async () => {
+      // Arrange
+      const scenarios = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+      const requestData: VideoPipeRequestDto = {
+        scenarios,
+        collectionId: 'collection-1',
+      };
+
+      const delays: Record<string, number> = {
+        s1: 70,
+        s2: 60,
+        s3: 50,
+        s4: 40,
+        s5: 30,
+        s6: 20,
+        s7: 0,
+      };
+
+      createVideoService.createVideoPipe.mockImplementation(
+        (req: { scenario: string }) =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  sceneImageUrl: `https://storage.example/${req.scenario}.png`,
+                  sceneVideoUrl: `https://storage.example/${req.scenario}.mp4`,
+                }),
+              delays[req.scenario],
+            ),
+          ),
+      );
+
+      // Act
+      await service.createVideoPipeline(requestData);
+
+      // Assert
+      expect(
+        videoAssemblyService.concatNormalizedAndGetUrl,
+      ).toHaveBeenCalledTimes(1);
+      const [partUrls] = videoAssemblyService.concatNormalizedAndGetUrl.mock
+        .calls[0] as [string[]];
+      expect(partUrls).toEqual([
+        'https://storage.example/s1.mp4',
+        'https://storage.example/s2.mp4',
+        'https://storage.example/s3.mp4',
+        'https://storage.example/s4.mp4',
+        'https://storage.example/s5.mp4',
+        'https://storage.example/s6.mp4',
+        'https://storage.example/s7.mp4',
+      ]);
+    });
+  });
+
+  describe('Test 10: Cache cleared for input scenarios when N ≠ 5', () => {
+    it('clears cache exactly with input scenarios for N = 2', async () => {
+      // Arrange
+      const scenarios = ['s1', 's2'];
+      const requestData: VideoPipeRequestDto = {
+        scenarios,
+        collectionId: 'collection-1',
+      };
+
+      // Act
+      await service.createVideoPipeline(requestData);
+
+      // Assert
+      expect(createVideoCacheService.delMany).toHaveBeenCalledTimes(1);
+      expect(createVideoCacheService.delMany).toHaveBeenCalledWith(
+        scenarios,
+        'collection-1',
+      );
+    });
+  });
 });
