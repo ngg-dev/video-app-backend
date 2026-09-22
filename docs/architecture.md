@@ -1,98 +1,94 @@
 # Архитектура
 
-## Граф модулей
+## Стек
 
-```mermaid
-flowchart TD
-    subgraph Entry["Точка входа"]
-        Main["main.ts<br/>bootstrap, ValidationPipe,<br/>глобальные обработчики ошибок"]
-        App["AppModule"]
-    end
+- **NestJS 11** (Express) — HTTP API, DI.
+- **TypeORM 0.3 + Postgres** — персистентность (`character-gallery`). `TypeOrmModule.forRoot`
+  в `src/app.module.ts` читает `DATABASE_*` из окружения, `autoLoadEntities: true`,
+  `synchronize` включён везде кроме `NODE_ENV=production`.
+- **ioredis** (`src/database/redis/`) — кэш результатов генерации сцен.
+- **Vercel AI SDK (`ai`)** + `@ai-sdk/deepseek`, `@ai-sdk/xai` — обёртки над LLM/image/video
+  провайдерами (DeepSeek, xAI Grok).
+- **fluent** ffmpeg-обвязка (`src/media/ffmpeg`) — сборка видео из сгенерированных клипов.
+- **@aws-sdk/client-s3** — загрузка файлов в S3-совместимое хранилище (Yandex Object Storage
+  по умолчанию).
+- **class-validator / class-transformer** — валидация DTO, включён глобальный
+  `ValidationPipe({ whitelist: true, transform: true })` (`src/main.ts`).
 
-    subgraph Infra["Инфраструктура"]
-        Logger["LoggerModule (@Global)<br/>AppLoggerService, Interceptor,<br/>ExceptionFilter, MethodExplorer"]
-        TypeOrm["TypeOrmModule.forRoot<br/>Postgres, autoLoadEntities"]
-        Config["ConfigModule (isGlobal)"]
-        Redis["RedisModule<br/>RedisService extends Redis"]
-        Storage["StorageModule<br/>StorageService + S3Client"]
-    end
+## Модули верхнего уровня
 
-    subgraph Providers["Провайдеры моделей"]
-        DeepSeek["DeepSeekModule<br/>DeepSeekService.generate"]
-        Xai["XaiModule<br/>XaiService.generate /<br/>generateImage / generateVideo"]
-    end
+`src/app.module.ts` собирает:
 
-    subgraph Domain["Доменные модули"]
-        CreateVideo["CreateVideoModule<br/>CreateVideoService,<br/>CreateVideoCacheService"]
-        Gallery["CharacterGalleryModule<br/>CharacterGalleryService,<br/>CharacterImageService,<br/>CharacterCollectionReaderService"]
-    end
+- `LoggerModule` — глобальный логгер + HTTP-интерцептор + exception filter.
+- `ConfigModule.forRoot({ isGlobal: true })` — `.env` через `dotenv/config`.
+- `TypeOrmModule.forRoot(...)` — подключение к Postgres.
+- `DeepSeekModule`, `XaiModule` — AI-провайдеры.
+- `RedisModule` — кэш.
+- `CharacterGalleryModule` — персонажи и коллекции персонажей.
+- `StorageModule` — загрузка файлов в S3.
+- `MediaModule` — ffmpeg-операции и сборка видео из частей.
+- `CreateVideoModule` — генерация одной сцены (картинка → видео).
+- `VideoPipeModule` — генерация нескольких сцен единым стилем и их склейка в один ролик.
 
-    Main --> App
-    App --> Logger
-    App --> Config
-    App --> TypeOrm
-    App --> Redis
-    App --> Storage
-    App --> DeepSeek
-    App --> Xai
-    App --> CreateVideo
-    App --> Gallery
+## Поток генерации видео (основной сценарий)
 
-    CreateVideo --> DeepSeek
-    CreateVideo --> Xai
-    CreateVideo --> Storage
-    CreateVideo --> Redis
-    CreateVideo -.->|CharacterCollectionReaderService| Gallery
-
-    Gallery --> Xai
-    Gallery --> Storage
-
-    Logger -.->|@LogMethods| CreateVideo
-    Logger -.->|@LogMethods| Gallery
-    Logger -.->|@LogMethods| DeepSeek
-    Logger -.->|@LogMethods| Xai
-    Logger -.->|@LogMethods| Storage
+```
+VideoPipeController → VideoPipeService
+  1. CharacterCollectionReaderService — грузит коллекцию персонажей + стиль
+  2. Для каждого сценария параллельно: CreateVideoService.createVideoPipe(...)
+       a. CreateVideoCacheService.get — проверка кэша в Redis по hash(сценарий+коллекция)
+       b. CreateVideoPromptService — строит промпт сцены (DeepSeek/шаблоны)
+       c. XaiService.generateImage — картинка сцены (Grok Imagine Image)
+       d. StorageService.uploadGeneratedFile — картинка → S3
+       e. CreateVideoPromptService — строит промпт видео
+       f. XaiService.generateVideo — видео сцены (Grok Imagine Video)
+       g. CreateVideoCacheService.set — кэш результата (TTL)
+  3. VideoAssemblyService.concatNormalizedAndGetUrl — скачивает все part-видео,
+     склеивает через ffmpeg (нормализация под целевой aspect ratio), грузит в S3
+  4. CreateVideoCacheService.delMany — инвалидация кэша по использованным сценариям
 ```
 
-## Модули
+`CreateVideoService` также используется напрямую (`POST /create-video/create`) для генерации
+одной сцены без склейки.
 
-| Модуль | Путь | Ответственность |
-|---|---|---|
-| `AppModule` | `src/app.module.ts` | Корневой модуль: собирает `ConfigModule`, `TypeOrmModule.forRoot`, `LoggerModule` и все доменные/инфраструктурные модули |
-| `LoggerModule` | `src/shared/logger/logger.module.ts` | Глобальный (`@Global`) модуль логирования: `AppLoggerService`, HTTP-интерцептор, фильтр исключений, explorer методов — см. `logging.md` |
-| `RedisModule` | `src/database/redis/redis.module.ts` | Глобальный модуль, экспортирует `RedisService` (клиент `ioredis`) |
-| `StorageModule` | `src/storage/storage.module.ts` | `StorageService` — загрузка файлов в S3-совместимое хранилище, `StorageController` (`POST /storage/upload`) |
-| `DeepSeekModule` | `src/ai-providers/deepseek/deepseek.module.ts` | `DeepSeekService.generate` — генерация текста через DeepSeek, `DeepSeekController` (`POST /deepseek/generate`) |
-| `XaiModule` | `src/ai-providers/xai/xai.module.ts` | `XaiService` — текст/изображение/видео через xAI Grok Imagine, контроллеры `XaiTextController`, `XaiImageController` |
-| `CreateVideoModule` | `src/create-video/create-video.module.ts` | `CreateVideoService` (конвейер создания видео), `CreateVideoCacheService` (кэш в Redis), `CreateVideoController` (`POST /create-video/create`) |
-| `CharacterGalleryModule` | `src/character-gallery/character-gallery.module.ts` | `CharacterGalleryService` — персистенция персонажей/коллекций и разрешение стиля, `CharacterImageService` — генерация изображения персонажа (промпт → xAI → `StorageService`), `CharacterCollectionReaderService` — загрузка коллекции с персонажами (экспортируется, используется `CreateVideoModule`/`VideoPipeModule`), `CharacterGalleryController` |
+## Разделение ответственности (паттерн сервис/оркестрация)
 
-## `src/main.ts`
+Проект последовательно разносит "построить и выполнить ffmpeg/API-команду" и
+"скачать/сохранить/убрать за собой":
 
-Bootstrap создаёт приложение (`NestFactory.create(AppModule, { bufferLogs: true })`), подключает
-`AppLoggerService` как логгер Nest, регистрирует глобальный `ValidationPipe` с `{ whitelist: true, transform:
-true }` (незадекларированные поля тела запроса отбрасываются, примитивы приводятся к типам DTO),
-подписывается на `unhandledRejection`/`uncaughtException` для логирования, и слушает порт из `PORT` (без
-дефолта в коде — `process.env.PORT ?? 3000`).
+- `src/media/`: `MediaService` — только ffmpeg-команды (обёртка над `FfmpegService`);
+  `VideoAssemblyService` — скачивание частей, вызов `MediaService`, загрузка результата в
+  `StorageService`, уборка временных файлов.
+- `src/character-gallery/`: `CharacterGalleryService` — персистентность и резолв стиля;
+  `CharacterImageService` — промпт → xAI → storage. Общий
+  `CharacterCollectionReaderService` (грузит коллекцию с персонажами) используется и
+  `CreateVideoModule`, и `VideoPipeModule`.
 
-## Конвенции `src/`
+Общие сквозные константы/enum — в `src/shared/constants/`, модуль-локальные — в
+`<module>/constants/`. Переиспользуемая чистая логика — в `<module>/utils/` или
+`src/shared/utils/`, не в сущностях/сервисах.
 
-- **Конфигурация** — читается через `src/shared/constants/config.ts` (там — единственное место, где
-  дергается `process.env` для большинства настроек), а не напрямую в сервисах. Честная оговорка: сам
-  `src/app.module.ts` — исключение, он читает `DATABASE_*` и `NODE_ENV` из `process.env` напрямую в вызове
-  `TypeOrmModule.forRoot`.
-- **Сквозные константы и enum** — живут в `src/shared/constants/` (`config.ts`, `logger.ts`,
-  `character-style.ts`, `deepseek.ts`, `xai.ts`, `video-aspect-ratio.ts`, `video-duration.ts`), а не
-  разбросаны по entity/сервисам. Модуль-локальные константы — в `<module>/constants/` (например
-  `src/media/constants/media.constant.ts`, `src/character-gallery/constants/character-gallery.constant.ts`).
-- **Чистые функции** — переиспользуемая чистая логика (без ФС/сети/`this`) выносится в `<module>/utils/`
-  (например `src/media/utils/ffmpeg-args.util.ts`) или в `src/shared/utils/` (например `withTempDir`,
-  `extensionFromMediaType`), если нужна нескольким модулям.
-- **Логирование новых сервисов** — класс сервиса помечается `@LogMethods()` (см. `logging.md`).
-- **Исходящие вызовы** — новый вызов внешнего API/хранилища/кэша оборачивается в
-  `AppLoggerService.trackExternalCall(...)`.
-- **Стиль импортов** — в репозитории смешаны абсолютные импорты вида `src/...` (baseUrl — корень репозитория)
-  и относительные (`../../../shared/...`); единой конвенции нет — следуй стилю файла, который редактируешь.
+## Логирование
 
-См. также [`flows.md`](./flows.md) (как модули используются в двух сквозных потоках) и
-[`logging.md`](./logging.md) (устройство `LoggerModule`).
+`AppLoggerService` (`src/shared/logger/logger.service.ts`) расширяет `ConsoleLogger`,
+подключается глобально через `LoggerModule` (HTTP-интерцептор + exception filter).
+Сервисы, помеченные декоратором `@LogMethods()` (`src/shared/logger/log-methods.decorator.ts`),
+автоматически логируют вызовы методов (старт/конец/ошибка, с длительностью).
+Любой исходящий вызов к внешнему сервису (DeepSeek, xAI, S3, Redis) оборачивается в
+`AppLoggerService.trackExternalCall(...)` — логирует запрос/ответ/ошибку и длительность,
+по образцу `DeepSeekService.generate`. Payload-логирование (тела запросов/ответов)
+управляется `LOG_PAYLOADS`, уровень — `LOG_LEVEL` (`src/shared/constants/config.ts`,
+`src/shared/constants/logger.ts`).
+
+## Null/undefined
+
+Проверки на `null`/`undefined` идут через тайп-гарды в `src/shared/utils`
+(`isNull`/`isNotNull`/`isUndefined`/`isNotUndefined`/`isNullOrUndefined`/
+`isNotNullOrUndefined`) — не через прямые сравнения с литералами `null`/`undefined` или
+`typeof x === 'undefined'` (кроме самого файла с их реализацией).
+
+## Импорты
+
+В коде встречаются оба стиля: абсолютные `src/...` (baseUrl — корень репозитория) и
+относительные (`../../../shared/...`) — единой конвенции нет, при правке файла следует
+следовать стилю, уже принятому в этом файле.
