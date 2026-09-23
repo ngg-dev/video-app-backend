@@ -69,14 +69,14 @@ export const SCENE_STYLE_REFERENCE_NOTE =
   'The last reference image is provided only as a visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.';
 
 export function buildSceneStyleAnchorNote(anchorPosition: number): string {
-  return `The reference image #${anchorPosition} is the collection style anchor and the main visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.`;
+  return `The reference image #${anchorPosition} is the style anchor and the main visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.`;
 }
 
 export function buildSceneStyleAnchorWithPreviousNote(
   anchorPosition: number,
   previousScenePosition: number,
 ): string {
-  return `The reference image #${anchorPosition} is the collection style anchor and the main visual style reference (color palette, rendering technique, line and shading manner). The reference image #${previousScenePosition} is the previous scene, provided only for visual continuity; neither of them should be used for composition, background, characters or story, so do not copy those.`;
+  return `The reference image #${anchorPosition} is the style anchor and the main visual style reference (color palette, rendering technique, line and shading manner). The reference image #${previousScenePosition} is the previous scene, provided only for visual continuity; neither of them should be used for composition, background, characters or story, so do not copy those.`;
 }
 
 export interface SceneStyleReferenceNoteParams {

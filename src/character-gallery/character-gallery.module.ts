@@ -6,7 +6,6 @@ import { CharacterGalleryController } from './character-gallery.controller';
 import { CharacterGalleryService } from './character-gallery.service';
 import { CharacterCollectionReaderService } from './character-collection-reader.service';
 import { CharacterImageService } from './character-image.service';
-import { CollectionStyleAnchorService } from './collection-style-anchor.service';
 import {
   CharacterCollectionItemEntity,
   CharacterItemEntity,
@@ -26,8 +25,7 @@ import {
     CharacterGalleryService,
     CharacterCollectionReaderService,
     CharacterImageService,
-    CollectionStyleAnchorService,
   ],
-  exports: [CharacterCollectionReaderService, CollectionStyleAnchorService],
+  exports: [CharacterCollectionReaderService],
 })
 export class CharacterGalleryModule {}

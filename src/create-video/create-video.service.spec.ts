@@ -23,7 +23,6 @@ import type { StorageService } from 'src/storage/storage.service';
 import type { CreateVideoCacheService } from './create-video-cache.service';
 import type { CreateVideoPromptService } from './create-video-prompt.service';
 import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
-import type { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 
 describe('CreateVideoService.createVideoPipe', () => {
@@ -84,9 +83,6 @@ describe('CreateVideoService.createVideoPipe', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: jest.fn().mockResolvedValue(null),
-      } as unknown as CollectionStyleAnchorService,
     );
   });
 
@@ -539,9 +535,6 @@ describe('CreateVideoService.prepareSceneImage', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: jest.fn().mockResolvedValue(null),
-      } as unknown as CollectionStyleAnchorService,
     );
   });
 
@@ -654,144 +647,6 @@ describe('CreateVideoService.prepareSceneImage', () => {
     expect(xaiService.generateImage).not.toHaveBeenCalled();
   });
 
-  it('creates and includes style anchor in referenceImages on cache miss', async () => {
-    // Arrange
-    const ensureStyleAnchorMock = jest
-      .fn()
-      .mockResolvedValue('https://s3/anchor.png');
-    service = new CreateVideoService(
-      createVideoPromptService as unknown as CreateVideoPromptService,
-      xaiService as unknown as XaiService,
-      storageService as unknown as StorageService,
-      createVideoCacheService as unknown as CreateVideoCacheService,
-      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: ensureStyleAnchorMock,
-      } as unknown as CollectionStyleAnchorService,
-    );
-    const requestData: CreateRequestDto = {
-      scenario: 'Bob walks',
-      collectionId: 'collection-1',
-    };
-
-    // Act
-    await service.prepareSceneImage(requestData);
-
-    // Assert
-    expect(ensureStyleAnchorMock).toHaveBeenCalledTimes(1);
-    expect(xaiService.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        referenceImages: ['https://img/bob.png', 'https://s3/anchor.png'],
-      }),
-    );
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
-      scenario: 'bob walks',
-      characterNames: ['Bob'],
-      collectionStyle: 'noir',
-      styleDescription: null,
-      aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: true,
-      hasPreviousScene: false,
-    });
-  });
-
-  it('skips ensureStyleAnchor when collection is preloaded', async () => {
-    // Arrange
-    const ensureStyleAnchorMock = jest.fn();
-    service = new CreateVideoService(
-      createVideoPromptService as unknown as CreateVideoPromptService,
-      xaiService as unknown as XaiService,
-      storageService as unknown as StorageService,
-      createVideoCacheService as unknown as CreateVideoCacheService,
-      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: ensureStyleAnchorMock,
-      } as unknown as CollectionStyleAnchorService,
-    );
-    const preloadedCollection = {
-      id: 'collection-1',
-      style: 'noir',
-      styleAnchorImageUrl: 'https://s3/anchor.png',
-      styleDescription: null,
-    };
-    const preloadedCharacters = [
-      { name: 'Bob', imageUrl: 'https://img/bob.png' },
-    ];
-    const requestData: CreateRequestDto = {
-      scenario: 'Bob walks',
-      collectionId: 'collection-1',
-      collection: preloadedCollection as never,
-      characters: preloadedCharacters as never,
-      styleReferenceImageUrl: 'https://s3/prev.png',
-    };
-
-    // Act
-    await service.prepareSceneImage(requestData);
-
-    // Assert
-    expect(ensureStyleAnchorMock).not.toHaveBeenCalled();
-    expect(
-      characterCollectionReaderService.loadCollectionWithCharacters,
-    ).not.toHaveBeenCalled();
-    expect(xaiService.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        referenceImages: [
-          'https://img/bob.png',
-          'https://s3/anchor.png',
-          'https://s3/prev.png',
-        ],
-      }),
-    );
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
-      scenario: 'bob walks',
-      characterNames: ['Bob'],
-      collectionStyle: 'noir',
-      styleDescription: null,
-      aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: true,
-      hasPreviousScene: true,
-    });
-  });
-
-  it('handles null style anchor (no characters) by omitting it from referenceImages', async () => {
-    // Arrange
-    const ensureStyleAnchorMock = jest.fn().mockResolvedValue(null);
-    service = new CreateVideoService(
-      createVideoPromptService as unknown as CreateVideoPromptService,
-      xaiService as unknown as XaiService,
-      storageService as unknown as StorageService,
-      createVideoCacheService as unknown as CreateVideoCacheService,
-      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: ensureStyleAnchorMock,
-      } as unknown as CollectionStyleAnchorService,
-    );
-    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
-      {
-        collection: { id: 'collection-1', style: 'noir' },
-        characters: [],
-      },
-    );
-
-    // Act
-    await service.prepareSceneImage(data);
-
-    // Assert
-    expect(xaiService.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        referenceImages: [],
-      }),
-    );
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        characterReferenceCount: 0,
-        hasStyleAnchor: false,
-      }),
-    );
-  });
-
   it('filters empty character images and counts only non-empty ones', async () => {
     // Arrange
     characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
@@ -855,6 +710,101 @@ describe('CreateVideoService.prepareSceneImage', () => {
       }),
     );
   });
+
+  it('passes style anchor image in referenceImages when styleAnchorImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'https://s3/anchor.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/bob.png', 'https://s3/anchor.png'],
+      }),
+    );
+  });
+
+  it('passes hasStyleAnchor=true to buildScenePrompt when styleAnchorImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'https://s3/anchor.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: true,
+      }),
+    );
+  });
+
+  it('does not treat empty styleAnchorImageUrl as a valid anchor', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: '',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/bob.png'],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: false,
+      }),
+    );
+  });
+
+  it('loads collection via reader when not preloaded and no styleAnchorImageUrl passed', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [{ name: 'Bob', imageUrl: 'https://img/bob.png' }],
+      },
+    );
+
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).toHaveBeenCalledWith('collection-1');
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: false,
+      }),
+    );
+    expect(xaiService.generateImage).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('CreateVideoService.renderSceneVideo', () => {
@@ -910,9 +860,6 @@ describe('CreateVideoService.renderSceneVideo', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
-      {
-        ensureStyleAnchor: jest.fn().mockResolvedValue(null),
-      } as unknown as CollectionStyleAnchorService,
     );
   });
 

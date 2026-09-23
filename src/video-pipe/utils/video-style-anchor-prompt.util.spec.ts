@@ -1,13 +1,13 @@
-import { buildCollectionStyleAnchorPrompt } from './collection-style-anchor-prompt.util';
+import { buildVideoStyleAnchorPrompt } from './video-style-anchor-prompt.util';
 
-describe('buildCollectionStyleAnchorPrompt', () => {
+describe('buildVideoStyleAnchorPrompt', () => {
   it('includes style and description literally with group frame and neutral background', () => {
     // Arrange
     const style = 'noir';
     const description = '2D cel-shading, flat colors.';
 
     // Act
-    const result = buildCollectionStyleAnchorPrompt(style, description);
+    const result = buildVideoStyleAnchorPrompt(style, description);
 
     // Assert
     expect(result).toContain('noir');
@@ -22,7 +22,7 @@ describe('buildCollectionStyleAnchorPrompt', () => {
     const description = null;
 
     // Act
-    const result = buildCollectionStyleAnchorPrompt(style, description);
+    const result = buildVideoStyleAnchorPrompt(style, description);
 
     // Assert
     expect(result).toContain('noir');

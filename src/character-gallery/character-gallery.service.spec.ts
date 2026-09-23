@@ -147,7 +147,7 @@ describe('CharacterGalleryService', () => {
 
     it('saves style description when provided', async () => {
       // Arrange
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const dto: any = {
         name: 'Collection 1',
         style: 'anime',
@@ -159,7 +159,6 @@ describe('CharacterGalleryService', () => {
         title: 'Collection 1',
         style: 'anime',
         styleDescription: 'flat colors',
-        styleAnchorImageUrl: null,
       };
 
       collectionRepository.create.mockReturnValueOnce(createdEntity);
@@ -173,7 +172,6 @@ describe('CharacterGalleryService', () => {
         title: 'Collection 1',
         style: 'anime',
         styleDescription: 'flat colors',
-        styleAnchorImageUrl: null,
       });
       expect(collectionRepository.save).toHaveBeenCalledTimes(1);
       expect(result.styleDescription).toBe('flat colors');
@@ -181,7 +179,7 @@ describe('CharacterGalleryService', () => {
 
     it('saves null style description when not provided', async () => {
       // Arrange
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const dto: any = {
         name: 'Collection 1',
         style: 'anime',
@@ -192,7 +190,6 @@ describe('CharacterGalleryService', () => {
         title: 'Collection 1',
         style: 'anime',
         styleDescription: null,
-        styleAnchorImageUrl: null,
       };
 
       collectionRepository.create.mockReturnValueOnce(createdEntity);
@@ -206,9 +203,36 @@ describe('CharacterGalleryService', () => {
         title: 'Collection 1',
         style: 'anime',
         styleDescription: null,
-        styleAnchorImageUrl: null,
       });
       expect(result.styleDescription).toBe(null);
+    });
+
+    it('does not write styleAnchorImageUrl to repository', async () => {
+      // Arrange
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      await service.createCharacterCollection(dto);
+
+      // Assert
+      const createCall = (
+        collectionRepository.create.mock.calls as unknown[][]
+      )[0][0] as Record<string, unknown>;
+      expect(createCall).not.toHaveProperty('styleAnchorImageUrl');
     });
   });
 });

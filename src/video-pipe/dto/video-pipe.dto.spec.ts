@@ -136,13 +136,20 @@ describe('VideoPipeRequestDto.scenarios validation', () => {
   });
 
   describe('Test 7: styleAnchorImageUrl whitelist', () => {
-    it('does not have styleAnchorImageUrl as a decorated field', () => {
-      // Arrange & Act
-      // styleAnchorImageUrl is not declared as a field in the DTO
-      const keys = Object.getOwnPropertyNames(VideoPipeRequestDto.prototype);
+    it('strips styleAnchorImageUrl from the DTO via whitelist', async () => {
+      // Arrange
+      const dto = plainToInstance(VideoPipeRequestDto, {
+        scenarios: ['s1', 's2'],
+        collectionId: 'c-1',
+        styleAnchorImageUrl: 'evil.png',
+      });
+
+      // Act
+      const errors = await validate(dto, { whitelist: true });
 
       // Assert
-      expect(keys).not.toContain('styleAnchorImageUrl');
+      expect(errors).toHaveLength(0);
+      expect(dto).not.toHaveProperty('styleAnchorImageUrl');
     });
   });
 });

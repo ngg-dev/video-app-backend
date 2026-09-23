@@ -9,7 +9,6 @@ import {
 import { PreparedSceneImage } from 'src/create-video/types/create-video.types';
 import { VideoAssemblyService } from 'src/media/video-assembly.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
-import { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 import {
   DEFAULT_VIDEO_ASPECT_RATIO,
   VIDEO_ASPECT_RATIO_DIMENSIONS,
@@ -21,6 +20,8 @@ import {
   VideoPipeResponseDto,
 } from './dto/video-pipe.dto';
 import { runSceneImageChain } from './utils/scene-chain.util';
+import { selectStyleAnchorReferenceImages } from './utils/video-style-anchor-references.util';
+import { VideoStyleAnchorService } from './video-style-anchor.service';
 
 @LogMethods()
 @Injectable()
@@ -30,7 +31,7 @@ export class VideoPipeService {
     private readonly videoAssemblyService: VideoAssemblyService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
-    private readonly collectionStyleAnchorService: CollectionStyleAnchorService,
+    private readonly videoStyleAnchorService: VideoStyleAnchorService,
   ) {}
 
   async createVideoPipeline(
@@ -44,11 +45,17 @@ export class VideoPipeService {
         collectionId,
       );
 
+    const styleReferenceImages = selectStyleAnchorReferenceImages(
+      scenarios,
+      characters,
+    );
     const styleAnchorImageUrl =
-      await this.collectionStyleAnchorService.ensureStyleAnchor(
-        collection,
-        characters,
-      );
+      styleReferenceImages.length > 0
+        ? await this.videoStyleAnchorService.generateStyleAnchor(
+            collection,
+            styleReferenceImages,
+          )
+        : undefined;
 
     const scenes = await runSceneImageChain<
       PreparedSceneImage,
@@ -61,8 +68,9 @@ export class VideoPipeService {
           collectionId,
           aspectRatio,
           duration: DEFAULT_VIDEO_DURATION_SECONDS,
-          collection: { ...collection, styleAnchorImageUrl },
+          collection,
           characters,
+          styleAnchorImageUrl,
           styleReferenceImageUrl: previous?.sceneImageUrl,
         };
 

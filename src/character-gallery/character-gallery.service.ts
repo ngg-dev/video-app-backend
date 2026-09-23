@@ -67,7 +67,6 @@ export class CharacterGalleryService {
       title: name,
       style: style ?? null,
       styleDescription: styleDescription ?? null,
-      styleAnchorImageUrl: null,
     });
 
     return this.characterCollectionItemRepository.save(entity);

@@ -112,6 +112,40 @@ describe('buildSceneStyleReferenceNote, buildSceneStyleTag, buildSceneStyleHint'
       );
       expect(result.substring(index4)).toMatch(/previous scene|continuity/i);
     });
+
+    it('does not use the word "collection" in anchor notes', () => {
+      // Arrange
+      const params = {
+        characterReferenceCount: 2,
+        hasStyleAnchor: true,
+        hasPreviousScene: false,
+      };
+
+      // Act
+      const result = buildSceneStyleReferenceNote(params);
+
+      // Assert
+      expect(result).not.toContain('collection');
+      expect(result).toContain('anchor');
+      expect(result).toContain('style anchor');
+    });
+
+    it('does not use the word "collection" when both anchor and previous scene are present', () => {
+      // Arrange
+      const params = {
+        characterReferenceCount: 2,
+        hasStyleAnchor: true,
+        hasPreviousScene: true,
+      };
+
+      // Act
+      const result = buildSceneStyleReferenceNote(params);
+
+      // Assert
+      expect(result).not.toContain('collection');
+      expect(result).toContain('style anchor');
+      expect(result).toContain('previous scene');
+    });
   });
 
   describe('buildSceneStyleTag', () => {

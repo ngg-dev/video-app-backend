@@ -8,7 +8,7 @@ export interface SceneReferenceImagesParams {
 
 /**
  * Builds the ordered list of reference images passed to image generation:
- * character reference images first, then the collection style anchor (when
+ * character reference images first, then the video style anchor (when
  * present), then the previous scene image (when present).
  */
 export function buildSceneReferenceImages({

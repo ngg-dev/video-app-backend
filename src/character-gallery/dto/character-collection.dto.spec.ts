@@ -108,14 +108,19 @@ describe('CreateCharacterCollectionDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('does not have styleAnchorImageUrl as a decorated field', () => {
-    // Arrange & Act
-    // styleAnchorImageUrl is not declared as a field in the DTO
-    const keys = Object.getOwnPropertyNames(
-      CreateCharacterCollectionDto.prototype,
-    );
+  it('strips styleAnchorImageUrl from the DTO via whitelist', async () => {
+    // Arrange
+    const dto = plainToInstance(CreateCharacterCollectionDto, {
+      name: 'Collection 1',
+      style: CharacterStyle.Anime,
+      styleAnchorImageUrl: 'evil.png',
+    });
+
+    // Act
+    const errors = await validate(dto, { whitelist: true });
 
     // Assert
-    expect(keys).not.toContain('styleAnchorImageUrl');
+    expect(errors).toHaveLength(0);
+    expect(dto).not.toHaveProperty('styleAnchorImageUrl');
   });
 });

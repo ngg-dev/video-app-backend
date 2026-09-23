@@ -1,4 +1,4 @@
-export function buildCollectionStyleAnchorPrompt(
+export function buildVideoStyleAnchorPrompt(
   style: string,
   styleDescription: string | null,
 ): string {

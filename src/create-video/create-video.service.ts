@@ -6,7 +6,6 @@ import {
 import { XaiService } from 'src/ai-providers/xai/xai.service';
 import { StorageService } from 'src/storage/storage.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
-import { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 import {
   assertCollectionHasStyle,
   selectMentionedCharacters,
@@ -31,7 +30,6 @@ export class CreateVideoService {
     private readonly storageService: StorageService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
-    private readonly collectionStyleAnchorService: CollectionStyleAnchorService,
   ) {}
 
   async prepareSceneImage(data: CreateRequestDto): Promise<PreparedSceneImage> {
@@ -58,11 +56,9 @@ export class CreateVideoService {
 
     let collection = data.collection;
     let collectionCharacters = data.characters;
-    let styleAnchor: string | null | undefined;
 
     if (isNotUndefined(collection) && isNotUndefined(collectionCharacters)) {
       assertCollectionHasStyle(collection);
-      styleAnchor = collection.styleAnchorImageUrl;
     } else {
       const loaded =
         await this.characterCollectionReaderService.loadCollectionWithCharacters(
@@ -70,15 +66,12 @@ export class CreateVideoService {
         );
       collection = loaded.collection;
       collectionCharacters = loaded.characters;
-      styleAnchor = await this.collectionStyleAnchorService.ensureStyleAnchor(
-        loaded.collection,
-        loaded.characters,
-      );
     }
 
     const styleAnchorImageUrl =
-      isNotNullOrUndefined(styleAnchor) && styleAnchor !== ''
-        ? styleAnchor
+      isNotNullOrUndefined(data.styleAnchorImageUrl) &&
+      data.styleAnchorImageUrl !== ''
+        ? data.styleAnchorImageUrl
         : undefined;
 
     const { persons: collectionPersons, referenceImages } =
