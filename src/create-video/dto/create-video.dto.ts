@@ -47,6 +47,15 @@ export class CreateRequestDto {
    */
   collection?: CharacterCollectionItemEntity | null;
   characters?: CharacterItemEntity[];
+
+  /**
+   * Style reference image URL, set only by internal callers (e.g.
+   * VideoPipeService) with the previous scene's image URL to keep the
+   * visual style consistent across scenes. Never populated from an HTTP
+   * request body: intentionally undecorated so class-validator ignores it,
+   * and CreateVideoController never sets it.
+   */
+  styleReferenceImageUrl?: string;
 }
 
 export class CreateVideoResponseDto {

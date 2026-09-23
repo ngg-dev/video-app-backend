@@ -45,6 +45,15 @@ export function buildSceneStyleHint(collectionStyle: string | null): string {
     : '';
 }
 
+export function buildSceneStyleTag(collectionStyle: string | null): string {
+  return collectionStyle
+    ? `Visual style: ${collectionStyle}. Keep this exact visual style.`
+    : '';
+}
+
+export const SCENE_STYLE_REFERENCE_NOTE =
+  'The last reference image is provided only as a visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.';
+
 export function buildSceneAspectRatioHint(
   aspectRatio: VideoAspectRatio,
 ): string {

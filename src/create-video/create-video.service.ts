@@ -13,9 +13,11 @@ import {
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { normalizeScenario } from './utils/scenario.util';
+import { buildSceneReferenceImages } from './utils/scene-reference-images.util';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
 import { isNotUndefined } from 'src/shared/utils';
+import { PreparedSceneImage } from './types/create-video.types';
 
 @Injectable()
 export class CreateVideoService {
@@ -27,9 +29,7 @@ export class CreateVideoService {
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
   ) {}
 
-  async createVideoPipe(
-    data: CreateRequestDto,
-  ): Promise<CreateVideoResponseDto> {
+  async prepareSceneImage(data: CreateRequestDto): Promise<PreparedSceneImage> {
     const scenario = normalizeScenario(data.scenario);
     const collectionId = data?.collectionId;
     const aspectRatio = data?.aspectRatio ?? DEFAULT_VIDEO_ASPECT_RATIO;
@@ -41,7 +41,14 @@ export class CreateVideoService {
     );
 
     if (cached) {
-      return cached;
+      return {
+        scenario,
+        collectionId,
+        duration,
+        characterNames: [],
+        sceneImageUrl: cached.sceneImageUrl,
+        cachedSceneVideoUrl: cached.sceneVideoUrl,
+      };
     }
 
     let collection = data.collection;
@@ -59,16 +66,22 @@ export class CreateVideoService {
     const { persons: collectionPersons, referenceImages } =
       selectMentionedCharacters(scenario, collectionCharacters);
 
+    const hasStyleReference = isNotUndefined(data.styleReferenceImageUrl);
+
     const scenePrompt = await this.createVideoPromptService.buildScenePrompt(
       scenario,
       collectionPersons.map(({ name }) => name),
       collection.style,
       aspectRatio,
+      hasStyleReference,
     );
 
     const sceneImage = await this.xaiService.generateImage({
       prompt: scenePrompt,
-      referenceImages,
+      referenceImages: buildSceneReferenceImages(
+        referenceImages,
+        data.styleReferenceImageUrl,
+      ),
       aspectRatio,
     });
 
@@ -83,9 +96,30 @@ export class CreateVideoService {
         'png',
       );
 
+    return {
+      scenario,
+      collectionId,
+      duration,
+      characterNames: collectionPersons.map(({ name }) => name),
+      sceneImageUrl,
+    };
+  }
+
+  async renderSceneVideo(
+    prepared: PreparedSceneImage,
+  ): Promise<CreateVideoResponseDto> {
+    const { scenario, collectionId, duration, sceneImageUrl } = prepared;
+
+    if (isNotUndefined(prepared.cachedSceneVideoUrl)) {
+      return {
+        sceneImageUrl,
+        sceneVideoUrl: prepared.cachedSceneVideoUrl,
+      };
+    }
+
     const videoPrompt = await this.createVideoPromptService.buildVideoPrompt(
       scenario,
-      collectionPersons.map(({ name }) => name),
+      prepared.characterNames,
     );
 
     const sceneVideo = await this.xaiService.generateVideo({
@@ -105,5 +139,11 @@ export class CreateVideoService {
     await this.createVideoCacheService.set(scenario, collectionId, result);
 
     return result;
+  }
+
+  async createVideoPipe(
+    data: CreateRequestDto,
+  ): Promise<CreateVideoResponseDto> {
+    return this.renderSceneVideo(await this.prepareSceneImage(data));
   }
 }
