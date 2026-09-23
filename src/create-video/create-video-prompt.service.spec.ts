@@ -8,11 +8,13 @@ import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
+  SCENE_STYLE_REFERENCE_NOTE,
   buildSceneImageCharactersHint,
   buildSceneVideoCharactersHint,
   buildSceneStyleHint,
   buildSceneAspectRatioHint,
   buildSceneLine,
+  buildSceneStyleTag,
 } from './constants/scene-prompt.constant';
 
 describe('CreateVideoPromptService', () => {
@@ -36,6 +38,7 @@ describe('CreateVideoPromptService', () => {
       ['Bob', 'Ann'],
       'noir comic',
       VideoAspectRatio.Vertical,
+      false,
     );
 
     // Assert
@@ -68,6 +71,7 @@ describe('CreateVideoPromptService', () => {
       [],
       null,
       VideoAspectRatio.Square,
+      false,
     );
 
     // Assert
@@ -83,36 +87,135 @@ describe('CreateVideoPromptService', () => {
     expect(lines[lines.length - 1]).toBe('Scene: a hero walks');
   });
 
-  it('returns the DeepSeek text when it is non-empty', async () => {
+  it('returns the DeepSeek text when it is non-empty, with a style suffix', async () => {
     // Arrange
-    deepSeekMock.generate.mockResolvedValue('a rich cinematic paragraph');
+    deepSeekMock.generate.mockResolvedValue('A cat walks in a garden.');
+    const style = 'anime';
 
     // Act
     const result = await service.buildScenePrompt(
       'a hero walks',
       [],
-      null,
+      style,
       VideoAspectRatio.Vertical,
+      false,
     );
 
     // Assert
-    expect(result).toBe('a rich cinematic paragraph');
+    expect(result).toBe(
+      `A cat walks in a garden. ${buildSceneStyleTag(style)}`,
+    );
+    expect(result).toContain('anime');
   });
 
-  it('falls back to the original scenario when DeepSeek returns an empty response', async () => {
+  it('falls back to the original scenario with a style suffix when DeepSeek returns an empty response', async () => {
     // Arrange
     deepSeekMock.generate.mockResolvedValue('');
+    const scenario = 'a hero walks';
+    const style = 'anime';
+
+    // Act
+    const result = await service.buildScenePrompt(
+      scenario,
+      [],
+      style,
+      VideoAspectRatio.Vertical,
+      false,
+    );
+
+    // Assert
+    expect(result).toBe(`${scenario} ${buildSceneStyleTag(style)}`);
+    expect(result).toContain('anime');
+  });
+
+  it('places the style tag as the last element without a style reference', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('A cinematic scene unfolds.');
+    const style = 'anime';
 
     // Act
     const result = await service.buildScenePrompt(
       'a hero walks',
       [],
-      null,
+      style,
       VideoAspectRatio.Vertical,
+      false,
     );
 
     // Assert
-    expect(result).toBe('a hero walks');
+    expect(result.endsWith(buildSceneStyleTag(style))).toBe(true);
+    expect(result.startsWith('A cinematic scene unfolds.')).toBe(true);
+  });
+
+  it('includes the style reference note when hasStyleReference is true', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('Generated text');
+    const style = 'anime';
+
+    // Act
+    const result = await service.buildScenePrompt(
+      'a hero walks',
+      [],
+      style,
+      VideoAspectRatio.Vertical,
+      true,
+    );
+
+    // Assert
+    expect(result).toBe(
+      `Generated text ${buildSceneStyleTag(style)} ${SCENE_STYLE_REFERENCE_NOTE}`,
+    );
+  });
+
+  it('does not include the style reference note when hasStyleReference is false', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('Generated text');
+    const style = 'anime';
+
+    // Act
+    const result = await service.buildScenePrompt(
+      'a hero walks',
+      [],
+      style,
+      VideoAspectRatio.Vertical,
+      false,
+    );
+
+    // Assert
+    expect(result).not.toContain(SCENE_STYLE_REFERENCE_NOTE);
+  });
+
+  it('does not change the instruction sent to DeepSeek when hasStyleReference parameter is added', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('generated');
+
+    // Act
+    await service.buildScenePrompt(
+      'a hero walks',
+      ['Bob', 'Ann'],
+      'noir comic',
+      VideoAspectRatio.Vertical,
+      true,
+    );
+
+    // Assert
+    const expected = [
+      ...SCENE_IMAGE_PROMPT_INSTRUCTIONS,
+      buildSceneImageCharactersHint(['Bob', 'Ann']),
+      buildSceneStyleHint('noir comic'),
+      buildSceneAspectRatioHint(VideoAspectRatio.Vertical),
+      '',
+      buildSceneLine('a hero walks'),
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    expect(deepSeekMock.generate).toHaveBeenCalledWith({ prompt: expected });
+    const [{ prompt: actualPrompt }] = deepSeekMock.generate.mock.calls[0] as [
+      { prompt: string },
+    ];
+    expect(actualPrompt).toBe(expected);
+    expect(actualPrompt).not.toContain(SCENE_STYLE_REFERENCE_NOTE);
   });
 
   it('builds the motion instruction byte-for-byte like the old code, without an aspect ratio hint', async () => {
@@ -151,6 +254,7 @@ describe('CreateVideoPromptService', () => {
       ['Bob'],
       null,
       VideoAspectRatio.Vertical,
+      false,
     );
     const [{ prompt: imagePrompt }] = deepSeekMock.generate.mock.calls[0] as [
       { prompt: string },

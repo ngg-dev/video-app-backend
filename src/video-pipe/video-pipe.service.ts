@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { CreateVideoService } from 'src/create-video/create-video.service';
 import { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
-import { CreateRequestDto } from 'src/create-video/dto/create-video.dto';
+import {
+  CreateRequestDto,
+  CreateVideoResponseDto,
+} from 'src/create-video/dto/create-video.dto';
+import { PreparedSceneImage } from 'src/create-video/types/create-video.types';
 import { VideoAssemblyService } from 'src/media/video-assembly.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 import {
@@ -15,6 +19,7 @@ import {
   VideoPipeRequestDto,
   VideoPipeResponseDto,
 } from './dto/video-pipe.dto';
+import { runSceneImageChain } from './utils/scene-chain.util';
 
 @LogMethods()
 @Injectable()
@@ -37,19 +42,25 @@ export class VideoPipeService {
         collectionId,
       );
 
-    const scenes = await Promise.all(
-      scenarios.map((scenario) => {
+    const scenes = await runSceneImageChain<
+      PreparedSceneImage,
+      CreateVideoResponseDto
+    >(
+      scenarios.length,
+      (index, previous) => {
         const sceneRequest: CreateRequestDto = {
-          scenario,
+          scenario: scenarios[index],
           collectionId,
           aspectRatio,
           duration: DEFAULT_VIDEO_DURATION_SECONDS,
           collection,
           characters,
+          styleReferenceImageUrl: previous?.sceneImageUrl,
         };
 
-        return this.createVideoService.createVideoPipe(sceneRequest);
-      }),
+        return this.createVideoService.prepareSceneImage(sceneRequest);
+      },
+      (prepared) => this.createVideoService.renderSceneVideo(prepared),
     );
 
     const partUrls = scenes.map((scene) => scene.sceneVideoUrl);

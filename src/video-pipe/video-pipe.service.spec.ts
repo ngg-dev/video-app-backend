@@ -11,12 +11,34 @@ import { VideoPipeService } from './video-pipe.service';
 import type { VideoPipeRequestDto } from './dto/video-pipe.dto';
 import { VIDEO_PIPE_RESULT_KEY_PREFIX } from './constants/video-pipe.constant';
 import type { CreateVideoService } from 'src/create-video/create-video.service';
+import type { PreparedSceneImage } from 'src/create-video/types/create-video.types';
 import type { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
 import type { VideoAssemblyService } from 'src/media/video-assembly.service';
 import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 
+interface DeferredPromise<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+}
+
+function createDeferred<T>(): DeferredPromise<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe('VideoPipeService.createVideoPipeline', () => {
-  let createVideoService: { createVideoPipe: jest.Mock };
+  let createVideoService: {
+    prepareSceneImage: jest.Mock;
+    renderSceneVideo: jest.Mock;
+  };
   let videoAssemblyService: { concatNormalizedAndGetUrl: jest.Mock };
   let createVideoCacheService: { delMany: jest.Mock };
   let characterCollectionReaderService: {
@@ -34,12 +56,23 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
   beforeEach(() => {
     createVideoService = {
-      createVideoPipe: jest
+      prepareSceneImage: jest
         .fn()
         .mockImplementation((req: { scenario: string }) =>
           Promise.resolve({
+            scenario: req.scenario,
+            collectionId: 'collection-1',
+            duration: 5,
+            characterNames: [],
             sceneImageUrl: `https://storage.example/${req.scenario}.png`,
-            sceneVideoUrl: `https://storage.example/${req.scenario}.mp4`,
+          }),
+        ),
+      renderSceneVideo: jest
+        .fn()
+        .mockImplementation((prepared: PreparedSceneImage) =>
+          Promise.resolve({
+            sceneImageUrl: prepared.sceneImageUrl,
+            sceneVideoUrl: `https://storage.example/${prepared.scenario}.mp4`,
           }),
         ),
     };
@@ -80,23 +113,23 @@ describe('VideoPipeService.createVideoPipeline', () => {
     ).toHaveBeenCalledWith('collection-1');
   });
 
-  it('calls createVideoPipe once per scenario, forwarding the preloaded collection and characters', async () => {
+  it('calls prepareSceneImage once per scenario, forwarding the preloaded collection and characters', async () => {
     // Act
     await service.createVideoPipeline(data);
 
     // Assert
-    expect(createVideoService.createVideoPipe).toHaveBeenCalledTimes(5);
+    expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(5);
     for (const [index, scenario] of data.scenarios.entries()) {
-      expect(createVideoService.createVideoPipe).toHaveBeenNthCalledWith(
+      expect(createVideoService.prepareSceneImage).toHaveBeenNthCalledWith(
         index + 1,
-        {
+        expect.objectContaining({
           scenario,
           collectionId: 'collection-1',
           aspectRatio: '9:16',
           duration: 5,
           collection,
           characters,
-        },
+        }),
       );
     }
   });
@@ -110,8 +143,9 @@ describe('VideoPipeService.createVideoPipeline', () => {
   });
 
   it('sends only sceneVideoUrl parts to the concat step, strictly in scenarios order', async () => {
-    // Arrange: scenarios resolve in reverse completion order (s5 fastest, s1 slowest),
-    // so the resulting order can only come from preserving request order, not completion order.
+    // Arrange: video generation resolves in reverse completion order (s5
+    // fastest, s1 slowest), so the resulting order can only come from
+    // preserving request order, not completion order.
     const delays: Record<string, number> = {
       s1: 40,
       s2: 30,
@@ -119,16 +153,16 @@ describe('VideoPipeService.createVideoPipeline', () => {
       s4: 10,
       s5: 0,
     };
-    createVideoService.createVideoPipe.mockImplementation(
-      (req: { scenario: string }) =>
+    createVideoService.renderSceneVideo.mockImplementation(
+      (prepared: PreparedSceneImage) =>
         new Promise((resolve) =>
           setTimeout(
             () =>
               resolve({
-                sceneImageUrl: `https://storage.example/${req.scenario}.png`,
-                sceneVideoUrl: `https://storage.example/${req.scenario}.mp4`,
+                sceneImageUrl: prepared.sceneImageUrl,
+                sceneVideoUrl: `https://storage.example/${prepared.scenario}.mp4`,
               }),
-            delays[req.scenario],
+            delays[prepared.scenario],
           ),
         ),
     );
@@ -245,9 +279,8 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    const [firstCallArg] = createVideoService.createVideoPipe.mock.calls[0] as [
-      Record<string, unknown>,
-    ];
+    const [firstCallArg] = createVideoService.prepareSceneImage.mock
+      .calls[0] as [Record<string, unknown>];
     expect(firstCallArg).toMatchObject({ aspectRatio: '9:16' });
   });
 
@@ -256,7 +289,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(data);
 
     // Assert
-    for (const call of createVideoService.createVideoPipe.mock.calls as [
+    for (const call of createVideoService.prepareSceneImage.mock.calls as [
       Record<string, unknown>,
     ][]) {
       expect(call[0]).toMatchObject({ duration: 5 });
@@ -274,14 +307,14 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await service.createVideoPipeline(requestData);
 
     // Assert
-    for (const call of createVideoService.createVideoPipe.mock.calls as [
+    for (const call of createVideoService.prepareSceneImage.mock.calls as [
       Record<string, unknown>,
     ][]) {
       expect(call[0]).toMatchObject({ aspectRatio: '1:1' });
     }
   });
 
-  it('throws NotFoundException when the collection does not exist, without calling createVideoPipe/concat/delMany for any scene', async () => {
+  it('throws NotFoundException when the collection does not exist, without calling prepareSceneImage/renderSceneVideo/concat/delMany for any scene', async () => {
     // Arrange
     characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
       new NotFoundException('Collection not found'),
@@ -291,14 +324,15 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       NotFoundException,
     );
-    expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
+    expect(createVideoService.prepareSceneImage).not.toHaveBeenCalled();
+    expect(createVideoService.renderSceneVideo).not.toHaveBeenCalled();
     expect(
       videoAssemblyService.concatNormalizedAndGetUrl,
     ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequestException when the collection has no style set, without calling createVideoPipe/concat/delMany for any scene', async () => {
+  it('throws BadRequestException when the collection has no style set, without calling prepareSceneImage/renderSceneVideo/concat/delMany for any scene', async () => {
     // Arrange
     characterCollectionReaderService.loadCollectionWithCharacters.mockRejectedValue(
       new BadRequestException('Collection has no style set'),
@@ -308,7 +342,8 @@ describe('VideoPipeService.createVideoPipeline', () => {
     await expect(service.createVideoPipeline(data)).rejects.toThrow(
       BadRequestException,
     );
-    expect(createVideoService.createVideoPipe).not.toHaveBeenCalled();
+    expect(createVideoService.prepareSceneImage).not.toHaveBeenCalled();
+    expect(createVideoService.renderSceneVideo).not.toHaveBeenCalled();
     expect(
       videoAssemblyService.concatNormalizedAndGetUrl,
     ).not.toHaveBeenCalled();
@@ -317,7 +352,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
   it('propagates a rejection from any single scene (fail-fast) without reaching concat/delMany', async () => {
     // Arrange
-    createVideoService.createVideoPipe
+    createVideoService.renderSceneVideo
       .mockResolvedValueOnce({
         sceneImageUrl: 'https://storage.example/s1.png',
         sceneVideoUrl: 'https://storage.example/s1.mp4',
@@ -332,5 +367,169 @@ describe('VideoPipeService.createVideoPipeline', () => {
       videoAssemblyService.concatNormalizedAndGetUrl,
     ).not.toHaveBeenCalled();
     expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
+  });
+
+  it('passes styleReferenceImageUrl as undefined for the first scene', async () => {
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    const [firstCall] = createVideoService.prepareSceneImage.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(firstCall.styleReferenceImageUrl).toBeUndefined();
+  });
+
+  it('passes the sceneImageUrl of scene N-1 as styleReferenceImageUrl to scene N', async () => {
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    for (let i = 1; i < data.scenarios.length; i++) {
+      const call = createVideoService.prepareSceneImage.mock.calls[i] as [
+        Record<string, unknown>,
+      ];
+      expect(call[0].styleReferenceImageUrl).toBe(
+        `https://storage.example/s${i}.png`,
+      );
+    }
+  });
+
+  it('does not start image generation for scene N+1 until scene N image is ready', async () => {
+    // Arrange
+    const s1Deferred = createDeferred<PreparedSceneImage>();
+    createVideoService.prepareSceneImage.mockImplementation(
+      (req: { scenario: string }) => {
+        if (req.scenario === 's1') {
+          return s1Deferred.promise;
+        }
+        return Promise.resolve({
+          scenario: req.scenario,
+          collectionId: 'collection-1',
+          duration: 5,
+          characterNames: [],
+          sceneImageUrl: `https://storage.example/${req.scenario}.png`,
+        });
+      },
+    );
+
+    // Act
+    const pipelinePromise = service.createVideoPipeline(data);
+    await Promise.resolve();
+
+    // Assert - only scene 1's image generation has started
+    expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(1);
+
+    // Resolve scene 1's image and flush
+    s1Deferred.resolve({
+      scenario: 's1',
+      collectionId: 'collection-1',
+      duration: 5,
+      characterNames: [],
+      sceneImageUrl: 'https://storage.example/s1.png',
+    });
+    await Promise.resolve();
+
+    // Assert - scene 2's image generation has now started
+    expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(2);
+
+    await pipelinePromise;
+  });
+
+  it('starts video generation for scene N before image N+1 is ready', async () => {
+    // Arrange
+    const s2Deferred = createDeferred<PreparedSceneImage>();
+    createVideoService.prepareSceneImage.mockImplementation(
+      (req: { scenario: string }) => {
+        if (req.scenario === 's2') {
+          return s2Deferred.promise;
+        }
+        return Promise.resolve({
+          scenario: req.scenario,
+          collectionId: 'collection-1',
+          duration: 5,
+          characterNames: [],
+          sceneImageUrl: `https://storage.example/${req.scenario}.png`,
+        });
+      },
+    );
+
+    // Act
+    const pipelinePromise = service.createVideoPipeline(data);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Assert - scene 1's video generation has already started, while scene 2's
+    // image is not ready yet
+    expect(createVideoService.renderSceneVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ scenario: 's1' }),
+    );
+    expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(2);
+
+    // Clean up
+    s2Deferred.resolve({
+      scenario: 's2',
+      collectionId: 'collection-1',
+      duration: 5,
+      characterNames: [],
+      sceneImageUrl: 'https://storage.example/s2.png',
+    });
+    await pipelinePromise;
+  });
+
+  it('fails fast on prepareSceneImage error and does not start subsequent images', async () => {
+    // Arrange
+    createVideoService.prepareSceneImage
+      .mockResolvedValueOnce({
+        scenario: 's1',
+        collectionId: 'collection-1',
+        duration: 5,
+        characterNames: [],
+        sceneImageUrl: 'https://storage.example/s1.png',
+      })
+      .mockRejectedValueOnce(new Error('image 2 failed'));
+
+    // Act & Assert
+    await expect(service.createVideoPipeline(data)).rejects.toThrow(
+      'image 2 failed',
+    );
+    expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(2);
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).not.toHaveBeenCalled();
+    expect(createVideoCacheService.delMany).not.toHaveBeenCalled();
+  });
+
+  it('passes the sceneImageUrl from a cached scene as styleReferenceImageUrl to the next scene', async () => {
+    // Arrange
+    createVideoService.prepareSceneImage
+      .mockResolvedValueOnce({
+        scenario: 's1',
+        collectionId: 'collection-1',
+        duration: 5,
+        characterNames: [],
+        sceneImageUrl: 'https://storage.example/cached-s1.png',
+        cachedSceneVideoUrl: 'https://storage.example/cached-s1.mp4',
+      })
+      .mockImplementation((req: { scenario: string }) =>
+        Promise.resolve({
+          scenario: req.scenario,
+          collectionId: 'collection-1',
+          duration: 5,
+          characterNames: [],
+          sceneImageUrl: `https://storage.example/${req.scenario}.png`,
+        }),
+      );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    const secondCall = createVideoService.prepareSceneImage.mock.calls[1] as [
+      Record<string, unknown>,
+    ];
+    expect(secondCall[0].styleReferenceImageUrl).toBe(
+      'https://storage.example/cached-s1.png',
+    );
   });
 });

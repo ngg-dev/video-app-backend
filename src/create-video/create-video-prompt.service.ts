@@ -4,11 +4,13 @@ import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
+  SCENE_STYLE_REFERENCE_NOTE,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
   buildSceneAspectRatioHint,
   buildSceneImageCharactersHint,
   buildSceneLine,
   buildSceneStyleHint,
+  buildSceneStyleTag,
   buildSceneVideoCharactersHint,
   buildVideoPromptFallback,
 } from './constants/scene-prompt.constant';
@@ -23,6 +25,7 @@ export class CreateVideoPromptService {
     characterNames: string[],
     collectionStyle: string | null,
     aspectRatio: VideoAspectRatio,
+    hasStyleReference: boolean,
   ): Promise<string> {
     const charactersHint = buildSceneImageCharactersHint(characterNames);
     const styleHint = buildSceneStyleHint(collectionStyle);
@@ -43,7 +46,12 @@ export class CreateVideoPromptService {
       prompt: instruction,
     });
 
-    return generatedPrompt || scenario;
+    const styleTag = buildSceneStyleTag(collectionStyle);
+    const referenceNote = hasStyleReference ? SCENE_STYLE_REFERENCE_NOTE : '';
+
+    return [generatedPrompt || scenario, styleTag, referenceNote]
+      .filter(Boolean)
+      .join(' ');
   }
 
   async buildVideoPrompt(

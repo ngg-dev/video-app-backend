@@ -302,6 +302,7 @@ describe('CreateVideoService.createVideoPipe', () => {
       ['Bob'],
       'noir',
       '9:16',
+      false,
     );
     expect(xaiService.generateImage).toHaveBeenCalledWith({
       prompt: 'scene prompt',
@@ -442,6 +443,7 @@ describe('CreateVideoService.createVideoPipe', () => {
       ['Bob'],
       'noir',
       '9:16',
+      false,
     );
   });
 
@@ -461,5 +463,287 @@ describe('CreateVideoService.createVideoPipe', () => {
     ];
     expect(videoCallArg).not.toHaveProperty('aspectRatio');
     expect(videoCallArg.resolution).toBe('720p');
+  });
+});
+
+describe('CreateVideoService.prepareSceneImage', () => {
+  let createVideoPromptService: {
+    buildScenePrompt: jest.Mock;
+    buildVideoPrompt: jest.Mock;
+  };
+  let xaiService: { generateImage: jest.Mock; generateVideo: jest.Mock };
+  let storageService: { uploadGeneratedFile: jest.Mock; upload: jest.Mock };
+  let createVideoCacheService: {
+    get: jest.Mock;
+    set: jest.Mock;
+    delMany: jest.Mock;
+  };
+  let characterCollectionReaderService: {
+    loadCollectionWithCharacters: jest.Mock;
+  };
+  let service: CreateVideoService;
+
+  const data: CreateRequestDto = {
+    scenario: 'A hero walks',
+    collectionId: 'collection-1',
+  };
+
+  beforeEach(() => {
+    createVideoPromptService = {
+      buildScenePrompt: jest.fn().mockResolvedValue('a prompt'),
+      buildVideoPrompt: jest.fn().mockResolvedValue('a prompt'),
+    };
+    xaiService = {
+      generateImage: jest.fn().mockResolvedValue({
+        uint8Array: new Uint8Array(),
+        mediaType: 'image/png',
+      }),
+      generateVideo: jest.fn().mockResolvedValue({
+        video: { uint8Array: new Uint8Array(), mediaType: 'video/mp4' },
+        videoUrl: 'https://provider.example/video.mp4',
+      }),
+    };
+    storageService = {
+      uploadGeneratedFile: jest.fn().mockResolvedValue({
+        key: 'scenes/a.png',
+        url: 'https://storage.example/scenes/a.png',
+        etag: 'etag',
+      }),
+      upload: jest.fn(),
+    };
+    createVideoCacheService = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      delMany: jest.fn().mockResolvedValue(undefined),
+    };
+    characterCollectionReaderService = {
+      loadCollectionWithCharacters: jest.fn().mockResolvedValue({
+        collection: { id: 'collection-1', style: 'noir' },
+        characters: [{ name: 'Bob', imageUrl: 'https://img/bob.png' }],
+      }),
+    };
+
+    service = new CreateVideoService(
+      createVideoPromptService as unknown as CreateVideoPromptService,
+      xaiService as unknown as XaiService,
+      storageService as unknown as StorageService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+    );
+  });
+
+  it('passes reference images including the style reference URL when styleReferenceImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleReferenceImageUrl: 'https://storage.example/prev.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: [
+          'https://img/bob.png',
+          'https://storage.example/prev.png',
+        ],
+      }),
+    );
+  });
+
+  it('passes only character reference images when no styleReferenceImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/bob.png'],
+      }),
+    );
+  });
+
+  it('passes hasStyleReference=true to buildScenePrompt when styleReferenceImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleReferenceImageUrl: 'https://storage.example/prev.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      'bob walks',
+      ['Bob'],
+      'noir',
+      '9:16',
+      true,
+    );
+  });
+
+  it('passes hasStyleReference=false to buildScenePrompt when styleReferenceImageUrl is not provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      'bob walks',
+      ['Bob'],
+      'noir',
+      '9:16',
+      false,
+    );
+  });
+
+  it('returns cached sceneImageUrl without calling external services on cache hit', async () => {
+    // Arrange
+    createVideoCacheService.get.mockResolvedValue({
+      sceneImageUrl: 'https://storage.example/cached.png',
+      sceneVideoUrl: 'https://storage.example/cached.mp4',
+    });
+
+    // Act
+    const result = await service.prepareSceneImage(data);
+
+    // Assert
+    expect(result.sceneImageUrl).toBe('https://storage.example/cached.png');
+    expect(result.cachedSceneVideoUrl).toBe(
+      'https://storage.example/cached.mp4',
+    );
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).not.toHaveBeenCalled();
+    expect(createVideoPromptService.buildScenePrompt).not.toHaveBeenCalled();
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+  });
+});
+
+describe('CreateVideoService.renderSceneVideo', () => {
+  let createVideoPromptService: {
+    buildScenePrompt: jest.Mock;
+    buildVideoPrompt: jest.Mock;
+  };
+  let xaiService: { generateImage: jest.Mock; generateVideo: jest.Mock };
+  let storageService: { uploadGeneratedFile: jest.Mock; upload: jest.Mock };
+  let createVideoCacheService: { get: jest.Mock; set: jest.Mock };
+  let characterCollectionReaderService: {
+    loadCollectionWithCharacters: jest.Mock;
+  };
+  let service: CreateVideoService;
+
+  beforeEach(() => {
+    createVideoPromptService = {
+      buildScenePrompt: jest.fn().mockResolvedValue('a prompt'),
+      buildVideoPrompt: jest.fn().mockResolvedValue('a prompt'),
+    };
+    xaiService = {
+      generateImage: jest.fn().mockResolvedValue({
+        uint8Array: new Uint8Array(),
+        mediaType: 'image/png',
+      }),
+      generateVideo: jest.fn().mockResolvedValue({
+        video: { uint8Array: new Uint8Array(), mediaType: 'video/mp4' },
+        videoUrl: 'https://provider.example/video.mp4',
+      }),
+    };
+    storageService = {
+      uploadGeneratedFile: jest.fn().mockResolvedValue({
+        key: 'scenes/a.png',
+        url: 'https://storage.example/scenes/a.png',
+        etag: 'etag',
+      }),
+      upload: jest.fn(),
+    };
+    createVideoCacheService = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+    };
+    characterCollectionReaderService = {
+      loadCollectionWithCharacters: jest.fn().mockResolvedValue({
+        collection: { id: 'collection-1', style: 'noir' },
+        characters: [],
+      }),
+    };
+
+    service = new CreateVideoService(
+      createVideoPromptService as unknown as CreateVideoPromptService,
+      xaiService as unknown as XaiService,
+      storageService as unknown as StorageService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+    );
+  });
+
+  it('returns cached video result without generating when cachedSceneVideoUrl is provided', async () => {
+    // Arrange
+    const prepared = {
+      scenario: 'A hero walks',
+      collectionId: 'collection-1',
+      duration: 5,
+      characterNames: [],
+      sceneImageUrl: 'https://storage.example/scene.png',
+      cachedSceneVideoUrl: 'https://storage.example/cached.mp4',
+    };
+
+    // Act
+    const result = await service.renderSceneVideo(prepared);
+
+    // Assert
+    expect(result).toEqual({
+      sceneImageUrl: 'https://storage.example/scene.png',
+      sceneVideoUrl: 'https://storage.example/cached.mp4',
+    });
+    expect(createVideoPromptService.buildVideoPrompt).not.toHaveBeenCalled();
+    expect(xaiService.generateVideo).not.toHaveBeenCalled();
+    expect(createVideoCacheService.set).not.toHaveBeenCalled();
+  });
+
+  it('generates and caches video when cachedSceneVideoUrl is not provided', async () => {
+    // Arrange
+    const prepared = {
+      scenario: 'a hero walks',
+      collectionId: 'collection-1',
+      duration: 5,
+      characterNames: ['Bob'],
+      sceneImageUrl: 'https://storage.example/scene.png',
+    };
+
+    // Act
+    const result = await service.renderSceneVideo(prepared);
+
+    // Assert
+    expect(createVideoPromptService.buildVideoPrompt).toHaveBeenCalledWith(
+      'a hero walks',
+      ['Bob'],
+    );
+    expect(xaiService.generateVideo).toHaveBeenCalledWith({
+      prompt: 'a prompt',
+      referenceImageUrls: ['https://storage.example/scene.png'],
+      resolution: '720p',
+      duration: 5,
+    });
+    expect(createVideoCacheService.set).toHaveBeenCalledWith(
+      'a hero walks',
+      'collection-1',
+      result,
+    );
   });
 });
