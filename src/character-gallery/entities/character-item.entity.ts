@@ -44,6 +44,12 @@ export class CharacterCollectionItemEntity {
   @Column({ type: 'varchar', nullable: true })
   style!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  styleDescription!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  styleAnchorImageUrl!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

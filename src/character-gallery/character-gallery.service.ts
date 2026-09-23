@@ -62,10 +62,12 @@ export class CharacterGalleryService {
   async createCharacterCollection(
     dto: CreateCharacterCollectionDto,
   ): Promise<CharacterCollectionItemEntity> {
-    const { name, style } = dto;
+    const { name, style, styleDescription } = dto;
     const entity = this.characterCollectionItemRepository.create({
       title: name,
       style: style ?? null,
+      styleDescription: styleDescription ?? null,
+      styleAnchorImageUrl: null,
     });
 
     return this.characterCollectionItemRepository.save(entity);

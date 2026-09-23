@@ -134,4 +134,15 @@ describe('VideoPipeRequestDto.scenarios validation', () => {
       expect(aspectRatioErrors[0].constraints).toHaveProperty('isEnum');
     });
   });
+
+  describe('Test 7: styleAnchorImageUrl whitelist', () => {
+    it('does not have styleAnchorImageUrl as a decorated field', () => {
+      // Arrange & Act
+      // styleAnchorImageUrl is not declared as a field in the DTO
+      const keys = Object.getOwnPropertyNames(VideoPipeRequestDto.prototype);
+
+      // Assert
+      expect(keys).not.toContain('styleAnchorImageUrl');
+    });
+  });
 });

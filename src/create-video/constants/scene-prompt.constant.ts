@@ -39,20 +39,67 @@ export function buildSceneVideoCharactersHint(
     : '';
 }
 
-export function buildSceneStyleHint(collectionStyle: string | null): string {
-  return collectionStyle
-    ? `Render the image in the following visual style: ${collectionStyle}.`
-    : '';
+export function buildSceneStyleHint(
+  collectionStyle: string | null,
+  styleDescription?: string | null,
+): string {
+  if (!collectionStyle) {
+    return '';
+  }
+
+  const descriptionClause = styleDescription ? ` ${styleDescription}` : '';
+
+  return `Render the image in the following visual style: ${collectionStyle}.${descriptionClause}`;
 }
 
-export function buildSceneStyleTag(collectionStyle: string | null): string {
-  return collectionStyle
-    ? `Visual style: ${collectionStyle}. Keep this exact visual style.`
-    : '';
+export function buildSceneStyleTag(
+  collectionStyle: string | null,
+  styleDescription?: string | null,
+): string {
+  if (!collectionStyle) {
+    return '';
+  }
+
+  const descriptionClause = styleDescription ? ` ${styleDescription}` : '';
+
+  return `Visual style: ${collectionStyle}.${descriptionClause} Keep this exact visual style.`;
 }
 
 export const SCENE_STYLE_REFERENCE_NOTE =
   'The last reference image is provided only as a visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.';
+
+export function buildSceneStyleAnchorNote(anchorPosition: number): string {
+  return `The reference image #${anchorPosition} is the collection style anchor and the main visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.`;
+}
+
+export function buildSceneStyleAnchorWithPreviousNote(
+  anchorPosition: number,
+  previousScenePosition: number,
+): string {
+  return `The reference image #${anchorPosition} is the collection style anchor and the main visual style reference (color palette, rendering technique, line and shading manner). The reference image #${previousScenePosition} is the previous scene, provided only for visual continuity; neither of them should be used for composition, background, characters or story, so do not copy those.`;
+}
+
+export interface SceneStyleReferenceNoteParams {
+  characterReferenceCount: number;
+  hasStyleAnchor: boolean;
+  hasPreviousScene: boolean;
+}
+
+export function buildSceneStyleReferenceNote({
+  characterReferenceCount,
+  hasStyleAnchor,
+  hasPreviousScene,
+}: SceneStyleReferenceNoteParams): string {
+  if (!hasStyleAnchor) {
+    return hasPreviousScene ? SCENE_STYLE_REFERENCE_NOTE : '';
+  }
+
+  const anchorPosition = characterReferenceCount + 1;
+
+  return hasPreviousScene
+    ? buildSceneStyleAnchorWithPreviousNote(anchorPosition, anchorPosition + 1)
+    : buildSceneStyleAnchorNote(anchorPosition);
+}
 
 export function buildSceneAspectRatioHint(
   aspectRatio: VideoAspectRatio,

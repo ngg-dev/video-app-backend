@@ -9,6 +9,7 @@ import {
 import { PreparedSceneImage } from 'src/create-video/types/create-video.types';
 import { VideoAssemblyService } from 'src/media/video-assembly.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
+import { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 import {
   DEFAULT_VIDEO_ASPECT_RATIO,
   VIDEO_ASPECT_RATIO_DIMENSIONS,
@@ -29,6 +30,7 @@ export class VideoPipeService {
     private readonly videoAssemblyService: VideoAssemblyService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
+    private readonly collectionStyleAnchorService: CollectionStyleAnchorService,
   ) {}
 
   async createVideoPipeline(
@@ -42,6 +44,12 @@ export class VideoPipeService {
         collectionId,
       );
 
+    const styleAnchorImageUrl =
+      await this.collectionStyleAnchorService.ensureStyleAnchor(
+        collection,
+        characters,
+      );
+
     const scenes = await runSceneImageChain<
       PreparedSceneImage,
       CreateVideoResponseDto
@@ -53,7 +61,7 @@ export class VideoPipeService {
           collectionId,
           aspectRatio,
           duration: DEFAULT_VIDEO_DURATION_SECONDS,
-          collection,
+          collection: { ...collection, styleAnchorImageUrl },
           characters,
           styleReferenceImageUrl: previous?.sceneImageUrl,
         };

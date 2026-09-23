@@ -125,4 +125,90 @@ describe('CharacterGalleryService', () => {
       expect(characterItemRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('createCharacterCollection', () => {
+    let collectionRepository: {
+      create: jest.Mock;
+      save: jest.Mock;
+    };
+
+    beforeEach(() => {
+      collectionRepository = {
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+
+      service = new CharacterGalleryService(
+        characterItemRepository as unknown as Repository<CharacterItemEntity>,
+        collectionRepository as unknown as Repository<CharacterCollectionItemEntity>,
+        characterImageService as unknown as CharacterImageService,
+      );
+    });
+
+    it('saves style description when provided', async () => {
+      // Arrange
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+        styleAnchorImageUrl: null,
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacterCollection(dto);
+
+      // Assert
+      expect(collectionRepository.create).toHaveBeenCalledWith({
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+        styleAnchorImageUrl: null,
+      });
+      expect(collectionRepository.save).toHaveBeenCalledTimes(1);
+      expect(result.styleDescription).toBe('flat colors');
+    });
+
+    it('saves null style description when not provided', async () => {
+      // Arrange
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: null,
+        styleAnchorImageUrl: null,
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacterCollection(dto);
+
+      // Assert
+      expect(collectionRepository.create).toHaveBeenCalledWith({
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: null,
+        styleAnchorImageUrl: null,
+      });
+      expect(result.styleDescription).toBe(null);
+    });
+  });
 });

@@ -6,6 +6,7 @@ import {
 import { XaiService } from 'src/ai-providers/xai/xai.service';
 import { StorageService } from 'src/storage/storage.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
+import { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 import {
   assertCollectionHasStyle,
   selectMentionedCharacters,
@@ -13,10 +14,13 @@ import {
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { normalizeScenario } from './utils/scenario.util';
-import { buildSceneReferenceImages } from './utils/scene-reference-images.util';
+import {
+  buildSceneReferenceImages,
+  selectCharacterReferenceImages,
+} from './utils/scene-reference-images.util';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
-import { isNotUndefined } from 'src/shared/utils';
+import { isNotNullOrUndefined, isNotUndefined } from 'src/shared/utils';
 import { PreparedSceneImage } from './types/create-video.types';
 
 @Injectable()
@@ -27,6 +31,7 @@ export class CreateVideoService {
     private readonly storageService: StorageService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
+    private readonly collectionStyleAnchorService: CollectionStyleAnchorService,
   ) {}
 
   async prepareSceneImage(data: CreateRequestDto): Promise<PreparedSceneImage> {
@@ -53,35 +58,52 @@ export class CreateVideoService {
 
     let collection = data.collection;
     let collectionCharacters = data.characters;
+    let styleAnchor: string | null | undefined;
 
     if (isNotUndefined(collection) && isNotUndefined(collectionCharacters)) {
       assertCollectionHasStyle(collection);
+      styleAnchor = collection.styleAnchorImageUrl;
     } else {
-      ({ collection, characters: collectionCharacters } =
+      const loaded =
         await this.characterCollectionReaderService.loadCollectionWithCharacters(
           collectionId,
-        ));
+        );
+      collection = loaded.collection;
+      collectionCharacters = loaded.characters;
+      styleAnchor = await this.collectionStyleAnchorService.ensureStyleAnchor(
+        loaded.collection,
+        loaded.characters,
+      );
     }
+
+    const styleAnchorImageUrl =
+      isNotNullOrUndefined(styleAnchor) && styleAnchor !== ''
+        ? styleAnchor
+        : undefined;
 
     const { persons: collectionPersons, referenceImages } =
       selectMentionedCharacters(scenario, collectionCharacters);
+    const characterReferenceImages =
+      selectCharacterReferenceImages(referenceImages);
 
-    const hasStyleReference = isNotUndefined(data.styleReferenceImageUrl);
-
-    const scenePrompt = await this.createVideoPromptService.buildScenePrompt(
+    const scenePrompt = await this.createVideoPromptService.buildScenePrompt({
       scenario,
-      collectionPersons.map(({ name }) => name),
-      collection.style,
+      characterNames: collectionPersons.map(({ name }) => name),
+      collectionStyle: collection.style,
+      styleDescription: collection.styleDescription ?? null,
       aspectRatio,
-      hasStyleReference,
-    );
+      characterReferenceCount: characterReferenceImages.length,
+      hasStyleAnchor: isNotUndefined(styleAnchorImageUrl),
+      hasPreviousScene: isNotUndefined(data.styleReferenceImageUrl),
+    });
 
     const sceneImage = await this.xaiService.generateImage({
       prompt: scenePrompt,
-      referenceImages: buildSceneReferenceImages(
-        referenceImages,
-        data.styleReferenceImageUrl,
-      ),
+      referenceImages: buildSceneReferenceImages({
+        characterReferenceImages,
+        styleAnchorImageUrl,
+        previousSceneImageUrl: data.styleReferenceImageUrl,
+      }),
       aspectRatio,
     });
 

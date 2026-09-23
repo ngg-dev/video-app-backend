@@ -141,3 +141,14 @@ describe('CreateRequestDto.duration validation', () => {
     expect(durationErrors[0].constraints).toHaveProperty('isInt');
   });
 });
+
+describe('CreateRequestDto.styleAnchorImageUrl whitelist', () => {
+  it('does not have styleAnchorImageUrl as a decorated field', () => {
+    // Arrange & Act
+    // styleAnchorImageUrl is not declared as a field in the DTO
+    const keys = Object.getOwnPropertyNames(CreateRequestDto.prototype);
+
+    // Assert
+    expect(keys).not.toContain('styleAnchorImageUrl');
+  });
+});

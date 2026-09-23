@@ -43,7 +43,8 @@ export class CreateRequestDto {
    * VideoPipeService) that already fetched this data — lets
    * CreateVideoService skip its own repository lookups. Never populated
    * from an HTTP request body: intentionally undecorated so class-validator
-   * ignores it, and CreateVideoController never sets it.
+   * ignores it, and CreateVideoController never sets it. The caller must
+   * also have already resolved `collection.styleAnchorImageUrl`.
    */
   collection?: CharacterCollectionItemEntity | null;
   characters?: CharacterItemEntity[];

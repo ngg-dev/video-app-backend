@@ -6,6 +6,10 @@ jest.mock('src/create-video/create-video.service', () => ({
   CreateVideoService: jest.fn(),
 }));
 
+jest.mock('src/ai-providers/xai/xai.service', () => ({
+  XaiService: jest.fn(),
+}));
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { VideoPipeService } from './video-pipe.service';
 import type { VideoPipeRequestDto } from './dto/video-pipe.dto';
@@ -15,6 +19,7 @@ import type { PreparedSceneImage } from 'src/create-video/types/create-video.typ
 import type { CreateVideoCacheService } from 'src/create-video/create-video-cache.service';
 import type { VideoAssemblyService } from 'src/media/video-assembly.service';
 import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
+import type { CollectionStyleAnchorService } from 'src/character-gallery/collection-style-anchor.service';
 
 interface DeferredPromise<T> {
   promise: Promise<T>;
@@ -97,6 +102,9 @@ describe('VideoPipeService.createVideoPipeline', () => {
       videoAssemblyService as unknown as VideoAssemblyService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      {
+        ensureStyleAnchor: jest.fn().mockResolvedValue(null),
+      } as unknown as CollectionStyleAnchorService,
     );
   });
 
@@ -127,7 +135,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
           collectionId: 'collection-1',
           aspectRatio: '9:16',
           duration: 5,
-          collection,
+          collection: { ...collection, styleAnchorImageUrl: null },
           characters,
         }),
       );
@@ -393,7 +401,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
               collectionId: 'collection-1',
               aspectRatio: '9:16',
               duration: 5,
-              collection,
+              collection: { ...collection, styleAnchorImageUrl: null },
               characters,
             }),
           );
@@ -554,6 +562,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
     // Act
     const pipelinePromise = service.createVideoPipeline(data);
     await Promise.resolve();
+    await Promise.resolve();
 
     // Assert - only scene 1's image generation has started
     expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(1);
@@ -594,6 +603,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
 
     // Act
     const pipelinePromise = service.createVideoPipeline(data);
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
 
@@ -669,5 +679,121 @@ describe('VideoPipeService.createVideoPipeline', () => {
     expect(secondCall[0].styleReferenceImageUrl).toBe(
       'https://storage.example/cached-s1.png',
     );
+  });
+
+  it('resolves style anchor exactly once at the beginning', async () => {
+    // Arrange
+    const ensureStyleAnchorMock = jest
+      .fn()
+      .mockResolvedValue('https://s3/anchor.png');
+    service = new VideoPipeService(
+      createVideoService as unknown as CreateVideoService,
+      videoAssemblyService as unknown as VideoAssemblyService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      {
+        ensureStyleAnchor: ensureStyleAnchorMock,
+      } as unknown as CollectionStyleAnchorService,
+    );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    expect(ensureStyleAnchorMock).toHaveBeenCalledTimes(1);
+    expect(ensureStyleAnchorMock).toHaveBeenCalledWith(collection, characters);
+    // Verify ensureStyleAnchor was called before first prepareSceneImage
+    expect(ensureStyleAnchorMock.mock.invocationCallOrder[0]).toBeLessThan(
+      createVideoService.prepareSceneImage.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('passes style anchor to first scene without N-1', async () => {
+    // Arrange
+    const ensureStyleAnchorMock = jest
+      .fn()
+      .mockResolvedValue('https://s3/anchor.png');
+    service = new VideoPipeService(
+      createVideoService as unknown as CreateVideoService,
+      videoAssemblyService as unknown as VideoAssemblyService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      {
+        ensureStyleAnchor: ensureStyleAnchorMock,
+      } as unknown as CollectionStyleAnchorService,
+    );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    const firstCall = createVideoService.prepareSceneImage.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(firstCall[0].collection).toMatchObject({
+      styleAnchorImageUrl: 'https://s3/anchor.png',
+    });
+    expect(firstCall[0].styleReferenceImageUrl).toBeUndefined();
+  });
+
+  it('passes style anchor and N-1 reference to subsequent scenes', async () => {
+    // Arrange
+    const ensureStyleAnchorMock = jest
+      .fn()
+      .mockResolvedValue('https://s3/anchor.png');
+    service = new VideoPipeService(
+      createVideoService as unknown as CreateVideoService,
+      videoAssemblyService as unknown as VideoAssemblyService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      {
+        ensureStyleAnchor: ensureStyleAnchorMock,
+      } as unknown as CollectionStyleAnchorService,
+    );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    for (let i = 1; i < data.scenarios.length; i++) {
+      const call = createVideoService.prepareSceneImage.mock.calls[i] as [
+        Record<string, unknown>,
+      ];
+      expect(call[0].collection).toMatchObject({
+        styleAnchorImageUrl: 'https://s3/anchor.png',
+      });
+      expect(call[0].styleReferenceImageUrl).toBe(
+        `https://storage.example/s${i}.png`,
+      );
+    }
+  });
+
+  it('passes null style anchor when no characters', async () => {
+    // Arrange
+    const ensureStyleAnchorMock = jest.fn().mockResolvedValue(null);
+    service = new VideoPipeService(
+      createVideoService as unknown as CreateVideoService,
+      videoAssemblyService as unknown as VideoAssemblyService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      {
+        ensureStyleAnchor: ensureStyleAnchorMock,
+      } as unknown as CollectionStyleAnchorService,
+    );
+
+    // Act
+    await service.createVideoPipeline(data);
+
+    // Assert
+    for (const call of createVideoService.prepareSceneImage.mock.calls as [
+      Record<string, unknown>,
+    ][]) {
+      expect(call[0].collection).toMatchObject({
+        styleAnchorImageUrl: null,
+      });
+    }
+    expect(
+      videoAssemblyService.concatNormalizedAndGetUrl,
+    ).toHaveBeenCalledTimes(1);
   });
 });
