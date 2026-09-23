@@ -1,11 +1,19 @@
 import { CharacterItemEntity } from 'src/character-gallery/entities/character-item.entity';
 import {
+  SCENE_END_LABEL,
+  SCENE_MIDDLE_LABEL,
+  SCENE_START_LABEL,
+} from '../constants/scenario-plan.constant';
+import {
   collectScenarioPlanViolations,
   parseScenarioPlan,
   toGeneratedScenes,
 } from './scenario-plan-parse.util';
 
 describe('Scenario Plan Parsing Utils', () => {
+  const withParts = (start: string, middle: string, end: string): string =>
+    `${SCENE_START_LABEL} ${start}\n${SCENE_MIDDLE_LABEL} ${middle}\n${SCENE_END_LABEL} ${end}`;
+
   const createCharacter = (
     name: string,
     description?: string,
@@ -86,8 +94,22 @@ describe('Scenario Plan Parsing Utils', () => {
       // Arrange
       const characters = [createCharacter('Аня'), createCharacter('Борис')];
       const scenes = [
-        { speakers: ['Аня'], text: 'Аня входит в кафе.' },
-        { speakers: ['Борис'], text: 'Борис сидит за столом.' },
+        {
+          speakers: ['Аня'],
+          text: withParts(
+            'Аня стоит у входа в кафе.',
+            'Аня входит в кафе.',
+            'Аня садится за столик у окна.',
+          ),
+        },
+        {
+          speakers: ['Борис'],
+          text: withParts(
+            'Борис заходит в кафе с улицы.',
+            'Борис сидит за столом.',
+            'Борис заказывает кофе у стойки.',
+          ),
+        },
       ];
 
       // Act
@@ -95,6 +117,43 @@ describe('Scenario Plan Parsing Utils', () => {
 
       // Assert
       expect(violations).toHaveLength(0);
+    });
+
+    it('reports missing start/middle/end labels', () => {
+      // Arrange
+      const characters = [createCharacter('Аня')];
+      const scenes = [{ speakers: ['Аня'], text: 'Аня входит в кафе.' }];
+
+      // Act
+      const violations = collectScenarioPlanViolations(scenes, characters, 1);
+
+      // Assert
+      expect(
+        violations.some(
+          (v) => v.includes(SCENE_START_LABEL) && v.includes(SCENE_END_LABEL),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('reports labels present but out of order', () => {
+      // Arrange
+      const characters = [createCharacter('Аня')];
+      const scenes = [
+        {
+          speakers: ['Аня'],
+          text: `${SCENE_END_LABEL} Аня уходит.\n${SCENE_START_LABEL} Аня стоит у двери.\n${SCENE_MIDDLE_LABEL} Аня входит в кафе.`,
+        },
+      ];
+
+      // Act
+      const violations = collectScenarioPlanViolations(scenes, characters, 1);
+
+      // Assert
+      expect(
+        violations.some(
+          (v) => v.includes(SCENE_START_LABEL) && v.includes(SCENE_END_LABEL),
+        ),
+      ).toBeTruthy();
     });
 
     it('reports scene count mismatch', () => {

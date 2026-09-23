@@ -6,6 +6,9 @@ import { GeneratedSceneDto } from '../dto/scenario-plan.dto';
 import {
   MAX_SCENE_TEXT_LENGTH,
   MAX_SPEAKING_CHARACTERS_PER_SCENE,
+  SCENE_END_LABEL,
+  SCENE_MIDDLE_LABEL,
+  SCENE_START_LABEL,
 } from '../constants/scenario-plan.constant';
 
 export interface ParsedScene {
@@ -79,6 +82,21 @@ export function collectScenarioPlanViolations(
     if (scene.text.length > MAX_SCENE_TEXT_LENGTH) {
       violations.push(
         `Сцена ${sceneNumber}: текст длиннее ${MAX_SCENE_TEXT_LENGTH} символов.`,
+      );
+    }
+
+    const startIndex = scene.text.indexOf(SCENE_START_LABEL);
+    const middleIndex = scene.text.indexOf(SCENE_MIDDLE_LABEL);
+    const endIndex = scene.text.indexOf(SCENE_END_LABEL);
+
+    if (
+      startIndex === -1 ||
+      middleIndex === -1 ||
+      endIndex === -1 ||
+      !(startIndex < middleIndex && middleIndex < endIndex)
+    ) {
+      violations.push(
+        `Сцена ${sceneNumber}: текст должен содержать метки "${SCENE_START_LABEL}", "${SCENE_MIDDLE_LABEL}" и "${SCENE_END_LABEL}" именно в этом порядке.`,
       );
     }
 

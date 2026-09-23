@@ -79,9 +79,18 @@ describe('ScenarioPlanService', () => {
     ];
     const collection = { id: 'c-1', style: 'noir', characters };
     const validScenarioPlan = JSON.stringify([
-      { speakers: ['Аня'], text: 'Аня входит в кафе.' },
-      { speakers: ['Борис'], text: 'Борис сидит за столом.' },
-      { speakers: ['Аня', 'Борис'], text: 'Аня и Борис разговаривают.' },
+      {
+        speakers: ['Аня'],
+        text: 'Начало: Аня стоит у входа.\nСередина: Аня входит в кафе.\nКонец: Аня садится за стол.',
+      },
+      {
+        speakers: ['Борис'],
+        text: 'Начало: Борис заходит с улицы.\nСередина: Борис сидит за столом.\nКонец: Борис заказывает кофе.',
+      },
+      {
+        speakers: ['Аня', 'Борис'],
+        text: 'Начало: Аня и Борис за одним столом.\nСередина: Аня и Борис разговаривают.\nКонец: Аня и Борис прощаются.',
+      },
     ]);
 
     readerServiceMock.loadCollectionWithCharacters.mockResolvedValue({
@@ -103,7 +112,9 @@ describe('ScenarioPlanService', () => {
 
     // Assert
     expect(result.scenarios).toHaveLength(3);
-    expect(result.scenarios[0]).toBe('Аня входит в кафе.');
+    expect(result.scenarios[0]).toBe(
+      'Начало: Аня стоит у входа.\nСередина: Аня входит в кафе.\nКонец: Аня садится за стол.',
+    );
     expect(result.collectionId).toBe('c-1');
     expect(result.aspectRatio).toBe(VideoAspectRatio.Vertical);
     expect(result.scenes).toHaveLength(3);
@@ -124,7 +135,10 @@ describe('ScenarioPlanService', () => {
     const characters = [createCharacter('Аня', 'detective')];
     const collection = { id: 'c-1', style: 'noir', characters };
     const validScenarioPlan = JSON.stringify([
-      { speakers: ['Аня'], text: 'Аня входит в кафе.' },
+      {
+        speakers: ['Аня'],
+        text: 'Начало: Аня стоит у входа.\nСередина: Аня входит в кафе.\nКонец: Аня садится за стол.',
+      },
     ]);
 
     readerServiceMock.loadCollectionWithCharacters.mockResolvedValue({
@@ -201,9 +215,18 @@ describe('ScenarioPlanService', () => {
     ]); // Only 2 scenes, expected 3
 
     const validPlan = JSON.stringify([
-      { speakers: ['Аня'], text: 'Аня входит в кафе.' },
-      { speakers: ['Аня'], text: 'Аня сидит за столом.' },
-      { speakers: ['Аня'], text: 'Аня уходит из кафе.' },
+      {
+        speakers: ['Аня'],
+        text: 'Начало: Аня стоит у входа.\nСередина: Аня входит в кафе.\nКонец: Аня садится за стол.',
+      },
+      {
+        speakers: ['Аня'],
+        text: 'Начало: Аня за столом.\nСередина: Аня сидит за столом.\nКонец: Аня встаёт из-за стола.',
+      },
+      {
+        speakers: ['Аня'],
+        text: 'Начало: Аня у выхода.\nСередина: Аня уходит из кафе.\nКонец: Аня выходит на улицу.',
+      },
     ]); // 3 scenes as expected
 
     promptServiceMock.generateScenarioPlanText
