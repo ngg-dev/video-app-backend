@@ -386,9 +386,7 @@ describe('VideoPipeService.createVideoPipeline', () => {
         // Assert
         expect(createVideoService.prepareSceneImage).toHaveBeenCalledTimes(n);
         for (const [index, scenario] of scenarios.entries()) {
-          expect(
-            createVideoService.prepareSceneImage,
-          ).toHaveBeenNthCalledWith(
+          expect(createVideoService.prepareSceneImage).toHaveBeenNthCalledWith(
             index + 1,
             expect.objectContaining({
               scenario,
