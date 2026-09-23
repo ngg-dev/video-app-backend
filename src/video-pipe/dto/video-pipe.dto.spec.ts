@@ -134,4 +134,22 @@ describe('VideoPipeRequestDto.scenarios validation', () => {
       expect(aspectRatioErrors[0].constraints).toHaveProperty('isEnum');
     });
   });
+
+  describe('Test 7: styleAnchorImageUrl whitelist', () => {
+    it('strips styleAnchorImageUrl from the DTO via whitelist', async () => {
+      // Arrange
+      const dto = plainToInstance(VideoPipeRequestDto, {
+        scenarios: ['s1', 's2'],
+        collectionId: 'c-1',
+        styleAnchorImageUrl: 'evil.png',
+      });
+
+      // Act
+      const errors = await validate(dto, { whitelist: true });
+
+      // Assert
+      expect(errors).toHaveLength(0);
+      expect(dto).not.toHaveProperty('styleAnchorImageUrl');
+    });
+  });
 });

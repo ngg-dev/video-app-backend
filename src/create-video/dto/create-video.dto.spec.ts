@@ -141,3 +141,21 @@ describe('CreateRequestDto.duration validation', () => {
     expect(durationErrors[0].constraints).toHaveProperty('isInt');
   });
 });
+
+describe('CreateRequestDto.styleAnchorImageUrl whitelist', () => {
+  it('strips styleAnchorImageUrl from the DTO via whitelist', async () => {
+    // Arrange
+    const dto = plainToInstance(CreateRequestDto, {
+      scenario: 'a scene',
+      collectionId: 'c-1',
+      styleAnchorImageUrl: 'evil.png',
+    });
+
+    // Act
+    const errors = await validate(dto, { whitelist: true });
+
+    // Assert
+    expect(errors).toHaveLength(0);
+    expect(dto).not.toHaveProperty('styleAnchorImageUrl');
+  });
+});

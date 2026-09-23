@@ -297,13 +297,16 @@ describe('CreateVideoService.createVideoPipe', () => {
 
     // Assert
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledTimes(1);
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
-      'bob walks',
-      ['Bob'],
-      'noir',
-      '9:16',
-      false,
-    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
+      scenario: 'bob walks',
+      characterNames: ['Bob'],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: '9:16',
+      characterReferenceCount: 1,
+      hasStyleAnchor: false,
+      hasPreviousScene: false,
+    });
     expect(xaiService.generateImage).toHaveBeenCalledWith({
       prompt: 'scene prompt',
       referenceImages: ['https://img/bob.png'],
@@ -324,9 +327,9 @@ describe('CreateVideoService.createVideoPipe', () => {
 
     // Assert
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledTimes(1);
-    const scenePromptArgs = createVideoPromptService.buildScenePrompt.mock
-      .calls[0] as unknown[];
-    expect(scenePromptArgs[3]).toBe('16:9');
+    const [scenePromptArgs] = createVideoPromptService.buildScenePrompt.mock
+      .calls[0] as [{ aspectRatio: string }];
+    expect(scenePromptArgs.aspectRatio).toBe('16:9');
 
     expect(createVideoPromptService.buildVideoPrompt).toHaveBeenCalledTimes(1);
     const videoPromptArgs = createVideoPromptService.buildVideoPrompt.mock
@@ -438,13 +441,16 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(
       characterCollectionReaderService.loadCollectionWithCharacters,
     ).not.toHaveBeenCalled();
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
-      'bob walks',
-      ['Bob'],
-      'noir',
-      '9:16',
-      false,
-    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
+      scenario: 'bob walks',
+      characterNames: ['Bob'],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: '9:16',
+      characterReferenceCount: 1,
+      hasStyleAnchor: false,
+      hasPreviousScene: false,
+    });
   });
 
   it('does not pass an aspect ratio to the video generation call', async () => {
@@ -584,13 +590,16 @@ describe('CreateVideoService.prepareSceneImage', () => {
     await service.prepareSceneImage(requestData);
 
     // Assert
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
-      'bob walks',
-      ['Bob'],
-      'noir',
-      '9:16',
-      true,
-    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
+      scenario: 'bob walks',
+      characterNames: ['Bob'],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: '9:16',
+      characterReferenceCount: 1,
+      hasStyleAnchor: false,
+      hasPreviousScene: true,
+    });
   });
 
   it('passes hasStyleReference=false to buildScenePrompt when styleReferenceImageUrl is not provided', async () => {
@@ -604,13 +613,16 @@ describe('CreateVideoService.prepareSceneImage', () => {
     await service.prepareSceneImage(requestData);
 
     // Assert
-    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
-      'bob walks',
-      ['Bob'],
-      'noir',
-      '9:16',
-      false,
-    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith({
+      scenario: 'bob walks',
+      characterNames: ['Bob'],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: '9:16',
+      characterReferenceCount: 1,
+      hasStyleAnchor: false,
+      hasPreviousScene: false,
+    });
   });
 
   it('returns cached sceneImageUrl without calling external services on cache hit', async () => {
@@ -633,6 +645,165 @@ describe('CreateVideoService.prepareSceneImage', () => {
     ).not.toHaveBeenCalled();
     expect(createVideoPromptService.buildScenePrompt).not.toHaveBeenCalled();
     expect(xaiService.generateImage).not.toHaveBeenCalled();
+  });
+
+  it('filters empty character images and counts only non-empty ones', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [
+          { name: 'Hero', imageUrl: '' },
+          { name: 'Ann', imageUrl: 'https://img/ann.png' },
+        ],
+      },
+    );
+
+    // Act
+    await service.prepareSceneImage({
+      scenario: 'Hero and Ann walk',
+      collectionId: 'collection-1',
+    });
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/ann.png'],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        characterNames: ['Hero', 'Ann'],
+        characterReferenceCount: 1,
+      }),
+    );
+  });
+
+  it('includes styleDescription from collection in buildScenePrompt', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: 'flat colors',
+        },
+        characters: [{ name: 'Bob', imageUrl: 'https://img/bob.png' }],
+      },
+    );
+
+    // Act
+    await service.prepareSceneImage({
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    });
+
+    // Assert
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectionStyle: 'noir',
+        styleDescription: 'flat colors',
+      }),
+    );
+  });
+
+  it('passes style anchor image in referenceImages when styleAnchorImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'https://s3/anchor.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/bob.png', 'https://s3/anchor.png'],
+      }),
+    );
+  });
+
+  it('passes hasStyleAnchor=true to buildScenePrompt when styleAnchorImageUrl is provided', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'https://s3/anchor.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: true,
+      }),
+    );
+  });
+
+  it('does not treat empty styleAnchorImageUrl as a valid anchor', async () => {
+    // Arrange
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: '',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['https://img/bob.png'],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: false,
+      }),
+    );
+  });
+
+  it('loads collection via reader when not preloaded and no styleAnchorImageUrl passed', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [{ name: 'Bob', imageUrl: 'https://img/bob.png' }],
+      },
+    );
+
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(
+      characterCollectionReaderService.loadCollectionWithCharacters,
+    ).toHaveBeenCalledWith('collection-1');
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasStyleAnchor: false,
+      }),
+    );
+    expect(xaiService.generateImage).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -43,8 +43,7 @@ export class CreateRequestDto {
    * VideoPipeService) that already fetched this data — lets
    * CreateVideoService skip its own repository lookups. Never populated
    * from an HTTP request body: intentionally undecorated so class-validator
-   * ignores it, and CreateVideoController never sets it.
-   */
+   * ignores it, and CreateVideoController never sets it.   */
   collection?: CharacterCollectionItemEntity | null;
   characters?: CharacterItemEntity[];
 
@@ -56,6 +55,14 @@ export class CreateRequestDto {
    * and CreateVideoController never sets it.
    */
   styleReferenceImageUrl?: string;
+
+  /**
+   * Video style anchor image URL, set only by internal callers (e.g.
+   * VideoPipeService) after generating it once per run. Never populated
+   * from an HTTP request body: intentionally undecorated so class-validator
+   * ignores it (whitelist strips it), and CreateVideoController never sets it.
+   */
+  styleAnchorImageUrl?: string;
 }
 
 export class CreateVideoResponseDto {

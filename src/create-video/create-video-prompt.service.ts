@@ -1,34 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { DeepSeekService } from 'src/ai-providers/deepseek/deepseek.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
-  SCENE_STYLE_REFERENCE_NOTE,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
   buildSceneAspectRatioHint,
   buildSceneImageCharactersHint,
   buildSceneLine,
   buildSceneStyleHint,
+  buildSceneStyleReferenceNote,
   buildSceneStyleTag,
   buildSceneVideoCharactersHint,
   buildVideoPromptFallback,
 } from './constants/scene-prompt.constant';
+import { BuildScenePromptParams } from './types/create-video.types';
 
 @LogMethods()
 @Injectable()
 export class CreateVideoPromptService {
   constructor(private readonly deepSeekService: DeepSeekService) {}
 
-  async buildScenePrompt(
-    scenario: string,
-    characterNames: string[],
-    collectionStyle: string | null,
-    aspectRatio: VideoAspectRatio,
-    hasStyleReference: boolean,
-  ): Promise<string> {
+  async buildScenePrompt({
+    scenario,
+    characterNames,
+    collectionStyle,
+    styleDescription,
+    aspectRatio,
+    characterReferenceCount,
+    hasStyleAnchor,
+    hasPreviousScene,
+  }: BuildScenePromptParams): Promise<string> {
     const charactersHint = buildSceneImageCharactersHint(characterNames);
-    const styleHint = buildSceneStyleHint(collectionStyle);
+    const styleHint = buildSceneStyleHint(collectionStyle, styleDescription);
     const aspectRatioHint = buildSceneAspectRatioHint(aspectRatio);
 
     const instruction = [
@@ -46,8 +49,12 @@ export class CreateVideoPromptService {
       prompt: instruction,
     });
 
-    const styleTag = buildSceneStyleTag(collectionStyle);
-    const referenceNote = hasStyleReference ? SCENE_STYLE_REFERENCE_NOTE : '';
+    const styleTag = buildSceneStyleTag(collectionStyle, styleDescription);
+    const referenceNote = buildSceneStyleReferenceNote({
+      characterReferenceCount,
+      hasStyleAnchor,
+      hasPreviousScene,
+    });
 
     return [generatedPrompt || scenario, styleTag, referenceNote]
       .filter(Boolean)

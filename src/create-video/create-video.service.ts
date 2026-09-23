@@ -13,10 +13,13 @@ import {
 import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { normalizeScenario } from './utils/scenario.util';
-import { buildSceneReferenceImages } from './utils/scene-reference-images.util';
+import {
+  buildSceneReferenceImages,
+  selectCharacterReferenceImages,
+} from './utils/scene-reference-images.util';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
-import { isNotUndefined } from 'src/shared/utils';
+import { isNotNullOrUndefined, isNotUndefined } from 'src/shared/utils';
 import { PreparedSceneImage } from './types/create-video.types';
 
 @Injectable()
@@ -57,31 +60,43 @@ export class CreateVideoService {
     if (isNotUndefined(collection) && isNotUndefined(collectionCharacters)) {
       assertCollectionHasStyle(collection);
     } else {
-      ({ collection, characters: collectionCharacters } =
+      const loaded =
         await this.characterCollectionReaderService.loadCollectionWithCharacters(
           collectionId,
-        ));
+        );
+      collection = loaded.collection;
+      collectionCharacters = loaded.characters;
     }
+
+    const styleAnchorImageUrl =
+      isNotNullOrUndefined(data.styleAnchorImageUrl) &&
+      data.styleAnchorImageUrl !== ''
+        ? data.styleAnchorImageUrl
+        : undefined;
 
     const { persons: collectionPersons, referenceImages } =
       selectMentionedCharacters(scenario, collectionCharacters);
+    const characterReferenceImages =
+      selectCharacterReferenceImages(referenceImages);
 
-    const hasStyleReference = isNotUndefined(data.styleReferenceImageUrl);
-
-    const scenePrompt = await this.createVideoPromptService.buildScenePrompt(
+    const scenePrompt = await this.createVideoPromptService.buildScenePrompt({
       scenario,
-      collectionPersons.map(({ name }) => name),
-      collection.style,
+      characterNames: collectionPersons.map(({ name }) => name),
+      collectionStyle: collection.style,
+      styleDescription: collection.styleDescription ?? null,
       aspectRatio,
-      hasStyleReference,
-    );
+      characterReferenceCount: characterReferenceImages.length,
+      hasStyleAnchor: isNotUndefined(styleAnchorImageUrl),
+      hasPreviousScene: isNotUndefined(data.styleReferenceImageUrl),
+    });
 
     const sceneImage = await this.xaiService.generateImage({
       prompt: scenePrompt,
-      referenceImages: buildSceneReferenceImages(
-        referenceImages,
-        data.styleReferenceImageUrl,
-      ),
+      referenceImages: buildSceneReferenceImages({
+        characterReferenceImages,
+        styleAnchorImageUrl,
+        previousSceneImageUrl: data.styleReferenceImageUrl,
+      }),
       aspectRatio,
     });
 

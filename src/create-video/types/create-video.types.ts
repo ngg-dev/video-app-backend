@@ -1,3 +1,5 @@
+import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
+
 export interface PreparedSceneImage {
   scenario: string;
   collectionId: string;
@@ -5,4 +7,15 @@ export interface PreparedSceneImage {
   characterNames: string[];
   sceneImageUrl: string;
   cachedSceneVideoUrl?: string;
+}
+
+export interface BuildScenePromptParams {
+  scenario: string;
+  characterNames: string[];
+  collectionStyle: string | null;
+  styleDescription: string | null;
+  aspectRatio: VideoAspectRatio;
+  characterReferenceCount: number;
+  hasStyleAnchor: boolean;
+  hasPreviousScene: boolean;
 }

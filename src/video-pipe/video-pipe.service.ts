@@ -20,6 +20,8 @@ import {
   VideoPipeResponseDto,
 } from './dto/video-pipe.dto';
 import { runSceneImageChain } from './utils/scene-chain.util';
+import { selectStyleAnchorReferenceImages } from './utils/video-style-anchor-references.util';
+import { VideoStyleAnchorService } from './video-style-anchor.service';
 
 @LogMethods()
 @Injectable()
@@ -29,6 +31,7 @@ export class VideoPipeService {
     private readonly videoAssemblyService: VideoAssemblyService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
+    private readonly videoStyleAnchorService: VideoStyleAnchorService,
   ) {}
 
   async createVideoPipeline(
@@ -41,6 +44,18 @@ export class VideoPipeService {
       await this.characterCollectionReaderService.loadCollectionWithCharacters(
         collectionId,
       );
+
+    const styleReferenceImages = selectStyleAnchorReferenceImages(
+      scenarios,
+      characters,
+    );
+    const styleAnchorImageUrl =
+      styleReferenceImages.length > 0
+        ? await this.videoStyleAnchorService.generateStyleAnchor(
+            collection,
+            styleReferenceImages,
+          )
+        : undefined;
 
     const scenes = await runSceneImageChain<
       PreparedSceneImage,
@@ -55,6 +70,7 @@ export class VideoPipeService {
           duration: DEFAULT_VIDEO_DURATION_SECONDS,
           collection,
           characters,
+          styleAnchorImageUrl,
           styleReferenceImageUrl: previous?.sceneImageUrl,
         };
 

@@ -125,4 +125,114 @@ describe('CharacterGalleryService', () => {
       expect(characterItemRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('createCharacterCollection', () => {
+    let collectionRepository: {
+      create: jest.Mock;
+      save: jest.Mock;
+    };
+
+    beforeEach(() => {
+      collectionRepository = {
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+
+      service = new CharacterGalleryService(
+        characterItemRepository as unknown as Repository<CharacterItemEntity>,
+        collectionRepository as unknown as Repository<CharacterCollectionItemEntity>,
+        characterImageService as unknown as CharacterImageService,
+      );
+    });
+
+    it('saves style description when provided', async () => {
+      // Arrange
+
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacterCollection(dto);
+
+      // Assert
+      expect(collectionRepository.create).toHaveBeenCalledWith({
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      });
+      expect(collectionRepository.save).toHaveBeenCalledTimes(1);
+      expect(result.styleDescription).toBe('flat colors');
+    });
+
+    it('saves null style description when not provided', async () => {
+      // Arrange
+
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: null,
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacterCollection(dto);
+
+      // Assert
+      expect(collectionRepository.create).toHaveBeenCalledWith({
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: null,
+      });
+      expect(result.styleDescription).toBe(null);
+    });
+
+    it('does not write styleAnchorImageUrl to repository', async () => {
+      // Arrange
+      const dto: any = {
+        name: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      const createdEntity = {
+        id: 'c1',
+        title: 'Collection 1',
+        style: 'anime',
+        styleDescription: 'flat colors',
+      };
+
+      collectionRepository.create.mockReturnValueOnce(createdEntity);
+      collectionRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      await service.createCharacterCollection(dto);
+
+      // Assert
+      const createCall = (
+        collectionRepository.create.mock.calls as unknown[][]
+      )[0][0] as Record<string, unknown>;
+      expect(createCall).not.toHaveProperty('styleAnchorImageUrl');
+    });
+  });
 });
