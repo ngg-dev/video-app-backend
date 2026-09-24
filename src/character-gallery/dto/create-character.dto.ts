@@ -1,4 +1,14 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDefined,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { CharacterAppearanceDto } from './character-appearance.dto';
 
 export class CreateCharacterDto {
   @IsString()
@@ -6,10 +16,11 @@ export class CreateCharacterDto {
   @MaxLength(255)
   name!: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100_000)
-  prompt!: string;
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CharacterAppearanceDto)
+  appearance!: CharacterAppearanceDto;
 
   @IsOptional()
   @IsString()

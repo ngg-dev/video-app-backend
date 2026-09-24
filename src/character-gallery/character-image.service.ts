@@ -2,11 +2,22 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { XaiService } from 'src/ai-providers/xai/xai.service';
 import { StorageService } from 'src/storage/storage.service';
-import { buildCharacterTurnaroundPrompt } from './utils/character-image-prompt.util';
+import {
+  buildCharacterBlock,
+  buildCharacterSheetPrompt,
+} from './utils/character-sheet-prompt.util';
 import { CHARACTER_IMAGE_KEY_PREFIX } from './constants/character-gallery.constant';
+import {
+  CHARACTER_SHEET_ASPECT_RATIO,
+  CHARACTER_SHEET_RESOLUTION,
+} from './constants/character-sheet.constant';
+import type {
+  CharacterAppearance,
+  CharacterSheetStyle,
+} from './types/character-appearance.types';
 
 /**
- * Generates a character turnaround image (prompt → xAI → storage). Kept separate from
+ * Generates a character reference sheet (appearance → prompt → xAI → storage). Kept separate from
  * `CharacterGalleryService`, which owns persistence and style resolution.
  */
 @LogMethods()
@@ -17,12 +28,20 @@ export class CharacterImageService {
     private readonly storageService: StorageService,
   ) {}
 
-  async generateCharacterImage(
-    prompt: string,
-    style: string | null,
+  async generateCharacterSheet(
+    appearance: CharacterAppearance,
+    { style, styleDescription }: CharacterSheetStyle,
   ): Promise<string> {
-    const imagePrompt = buildCharacterTurnaroundPrompt(prompt, style);
-    const image = await this.xaiService.generateImage({ prompt: imagePrompt });
+    const prompt = buildCharacterSheetPrompt({
+      style,
+      styleDescription,
+      characterBlock: buildCharacterBlock(appearance),
+    });
+    const image = await this.xaiService.generateImage({
+      prompt,
+      aspectRatio: CHARACTER_SHEET_ASPECT_RATIO,
+      resolution: CHARACTER_SHEET_RESOLUTION,
+    });
 
     if (!image) {
       throw new InternalServerErrorException(

@@ -2,6 +2,8 @@ import { DataContent, GeneratedFile } from 'ai';
 
 export type AspectRatio = `${number}:${number}`;
 
+export type XaiImageResolution = '1k' | '2k';
+
 export interface GenerateParams {
   model?: string;
   prompt: string;
@@ -12,6 +14,7 @@ export interface GenerateImageParams {
   prompt: string;
   referenceImages?: DataContent[];
   aspectRatio?: AspectRatio;
+  resolution?: XaiImageResolution;
 }
 
 export interface GenerateVideoParams {

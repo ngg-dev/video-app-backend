@@ -15,6 +15,17 @@ import type { CharacterImageService } from './character-image.service';
 import type { CreateCharacterDto } from './dto/create-character.dto';
 
 describe('CharacterGalleryService', () => {
+  const appearance = {
+    ageAndGender: 'AGE',
+    face: 'FACE',
+    hair: 'HAIR',
+    build: 'BUILD',
+    outfit: 'OUTFIT',
+    footwear: 'FOOTWEAR',
+    accessories: 'ACCESSORIES',
+    palette: 'PALETTE',
+  };
+
   let service: CharacterGalleryService;
   let characterItemRepository: {
     create: jest.Mock;
@@ -24,7 +35,7 @@ describe('CharacterGalleryService', () => {
     findOne: jest.Mock;
   };
   let characterImageService: {
-    generateCharacterImage: jest.Mock;
+    generateCharacterSheet: jest.Mock;
   };
 
   beforeEach(() => {
@@ -40,7 +51,7 @@ describe('CharacterGalleryService', () => {
     };
 
     characterImageService = {
-      generateCharacterImage: jest.fn(),
+      generateCharacterSheet: jest.fn(),
     };
 
     service = new CharacterGalleryService(
@@ -55,25 +66,26 @@ describe('CharacterGalleryService', () => {
       // Arrange
       const dto: CreateCharacterDto = {
         name: 'Боб',
-        prompt: 'p',
+        appearance,
         collectionId: 'c1',
       };
 
       const mockCollection = {
         id: 'c1',
         style: 'noir',
+        styleDescription: null,
       };
 
       characterCollectionRepository.findOne.mockResolvedValueOnce(
         mockCollection,
       );
-      characterImageService.generateCharacterImage.mockResolvedValueOnce(
+      characterImageService.generateCharacterSheet.mockResolvedValueOnce(
         'https://s3/x.png',
       );
 
       const createdEntity = {
         name: 'Боб',
-        description: 'p',
+        appearance,
         style: 'noir',
         collectionId: 'c1',
         imageUrl: 'https://s3/x.png',
@@ -89,13 +101,13 @@ describe('CharacterGalleryService', () => {
       expect(characterCollectionRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'c1' },
       });
-      expect(characterImageService.generateCharacterImage).toHaveBeenCalledWith(
-        'p',
-        'noir',
+      expect(characterImageService.generateCharacterSheet).toHaveBeenCalledWith(
+        appearance,
+        { style: 'noir', styleDescription: null },
       );
       expect(characterItemRepository.create).toHaveBeenCalledWith({
         name: 'Боб',
-        description: 'p',
+        appearance,
         style: 'noir',
         collectionId: 'c1',
         imageUrl: 'https://s3/x.png',
@@ -108,7 +120,7 @@ describe('CharacterGalleryService', () => {
       // Arrange
       const dto: CreateCharacterDto = {
         name: 'Боб',
-        prompt: 'p',
+        appearance,
         collectionId: 'c1',
       };
 
@@ -119,10 +131,95 @@ describe('CharacterGalleryService', () => {
         NotFoundException,
       );
       expect(
-        characterImageService.generateCharacterImage,
+        characterImageService.generateCharacterSheet,
       ).not.toHaveBeenCalled();
       expect(characterItemRepository.create).not.toHaveBeenCalled();
       expect(characterItemRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('uses style from collection with styleDescription when collection has both', async () => {
+      // Arrange
+      const dto: CreateCharacterDto = {
+        name: 'Аня',
+        appearance,
+        collectionId: 'c1',
+      };
+
+      const mockCollection = {
+        id: 'c1',
+        style: 'anime',
+        styleDescription: 'cel shading',
+      };
+
+      characterCollectionRepository.findOne.mockResolvedValueOnce(
+        mockCollection,
+      );
+      characterImageService.generateCharacterSheet.mockResolvedValueOnce(
+        'https://s3/anya.png',
+      );
+
+      const createdEntity = {
+        name: 'Аня',
+        appearance,
+        style: 'anime',
+        collectionId: 'c1',
+        imageUrl: 'https://s3/anya.png',
+      };
+
+      characterItemRepository.create.mockReturnValueOnce(createdEntity);
+      characterItemRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacter(dto);
+
+      // Assert
+      expect(characterImageService.generateCharacterSheet).toHaveBeenCalledWith(
+        appearance,
+        { style: 'anime', styleDescription: 'cel shading' },
+      );
+      expect(result).toEqual(createdEntity);
+    });
+
+    it('creates character with inline style when no collectionId provided', async () => {
+      // Arrange
+      const dto: CreateCharacterDto = {
+        name: 'Боб',
+        appearance,
+        style: 'noir',
+      };
+
+      characterImageService.generateCharacterSheet.mockResolvedValueOnce(
+        'https://s3/bob.png',
+      );
+
+      const createdEntity = {
+        name: 'Боб',
+        appearance,
+        style: 'noir',
+        collectionId: null,
+        imageUrl: 'https://s3/bob.png',
+      };
+
+      characterItemRepository.create.mockReturnValueOnce(createdEntity);
+      characterItemRepository.save.mockResolvedValueOnce(createdEntity);
+
+      // Act
+      const result = await service.createCharacter(dto);
+
+      // Assert
+      expect(characterCollectionRepository.findOne).not.toHaveBeenCalled();
+      expect(characterImageService.generateCharacterSheet).toHaveBeenCalledWith(
+        appearance,
+        { style: 'noir', styleDescription: null },
+      );
+      expect(characterItemRepository.create).toHaveBeenCalledWith({
+        name: 'Боб',
+        appearance,
+        style: 'noir',
+        collectionId: null,
+        imageUrl: 'https://s3/bob.png',
+      });
+      expect(result).toEqual(createdEntity);
     });
   });
 

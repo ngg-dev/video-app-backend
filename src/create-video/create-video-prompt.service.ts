@@ -5,6 +5,7 @@ import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
   buildSceneAspectRatioHint,
+  buildSceneCharacterSheetNote,
   buildSceneImageCharactersHint,
   buildSceneLine,
   buildSceneStyleHint,
@@ -50,13 +51,21 @@ export class CreateVideoPromptService {
     });
 
     const styleTag = buildSceneStyleTag(collectionStyle, styleDescription);
+    const characterSheetNote = buildSceneCharacterSheetNote(
+      characterReferenceCount,
+    );
     const referenceNote = buildSceneStyleReferenceNote({
       characterReferenceCount,
       hasStyleAnchor,
       hasPreviousScene,
     });
 
-    return [generatedPrompt || scenario, styleTag, referenceNote]
+    return [
+      generatedPrompt || scenario,
+      styleTag,
+      characterSheetNote,
+      referenceNote,
+    ]
       .filter(Boolean)
       .join(' ');
   }

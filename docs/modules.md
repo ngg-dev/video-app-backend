@@ -36,8 +36,8 @@
   - `CharacterCollectionItemEntity` (`character_collection_items`) — `title`, `style`.
 - **`CharacterGalleryService`** — персистентность: создание персонажа (резолвит стиль —
   из коллекции, если указана `collectionId`, иначе из DTO) и создание коллекции.
-- **`CharacterImageService`** — генерация turnaround-картинки персонажа: промпт
-  (`utils/character-image-prompt.util.ts`) → `XaiService.generateImage` → `StorageService`.
+- **`CharacterImageService`** — генерация мастер-листа персонажа: промпт
+  (`utils/character-sheet-prompt.util.ts`) → `XaiService.generateImage` → `StorageService`.
   Специально отделён от `CharacterGalleryService`, чтобы не смешивать генерацию и
   персистентность.
 - **`CharacterCollectionReaderService`** — грузит коллекцию + её персонажей одним вызовом,

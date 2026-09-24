@@ -19,7 +19,7 @@ erDiagram
         uuid id PK
         varchar name
         text imageUrl "nullable, публичный URL в S3"
-        text description "nullable, исходный prompt"
+        jsonb appearance "NOT NULL, 8 полей внешности"
         varchar style "nullable"
         varchar collectionId "nullable"
         timestamp createdAt
@@ -51,11 +51,13 @@ erDiagram
 | `id` | `uuid` (PK, generated) | нет |
 | `name` | `varchar` | нет |
 | `imageUrl` | `text` | да |
-| `description` | `text` | да |
+| `appearance` | `jsonb` (8 полей внешности) | нет |
 | `style` | `varchar` | да |
 | `collectionId` | `varchar` | да |
 | `createdAt` | `timestamp` | нет |
 | `updatedAt` | `timestamp` | нет |
+
+Внимание: `appearance` — NOT NULL, `description` удалён. Миграций нет (`synchronize`); перед запуском на dev-БД строки `character_items` нужно очистить вручную.
 
 ## Схема БД
 

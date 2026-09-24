@@ -101,6 +101,21 @@ export function buildSceneStyleReferenceNote({
     : buildSceneStyleAnchorNote(anchorPosition);
 }
 
+export function buildSceneCharacterSheetNote(
+  characterReferenceCount: number,
+): string {
+  if (characterReferenceCount < 1) {
+    return '';
+  }
+
+  const target =
+    characterReferenceCount === 1
+      ? 'The reference image #1 is a character sheet'
+      : `The reference images #1-#${characterReferenceCount} are character sheets`;
+
+  return `${target}: a multi-panel image showing one character from several angles and with different facial expressions on a neutral background. Use them only to keep the character's appearance consistent. The result must be ONE single, cohesive scene frame, not a grid, collage or multi-panel sheet; do not copy the panel layout or the neutral sheet background.`;
+}
+
 export function buildSceneAspectRatioHint(
   aspectRatio: VideoAspectRatio,
 ): string {

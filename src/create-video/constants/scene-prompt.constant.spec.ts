@@ -3,6 +3,7 @@ import {
   buildSceneStyleHint,
   buildSceneStyleReferenceNote,
   SCENE_STYLE_REFERENCE_NOTE,
+  buildSceneCharacterSheetNote,
 } from './scene-prompt.constant';
 
 describe('buildSceneStyleReferenceNote, buildSceneStyleTag, buildSceneStyleHint', () => {
@@ -202,6 +203,40 @@ describe('buildSceneStyleReferenceNote, buildSceneStyleTag, buildSceneStyleHint'
       expect(result).toBe(
         'Render the image in the following visual style: noir.',
       );
+    });
+  });
+
+  describe('buildSceneCharacterSheetNote', () => {
+    it('returns empty string when no characters are referenced', () => {
+      // Arrange & Act
+      const result = buildSceneCharacterSheetNote(0);
+
+      // Assert
+      expect(result).toBe('');
+    });
+
+    it('returns a note mentioning #1 when exactly 1 character is referenced', () => {
+      // Arrange & Act
+      const result = buildSceneCharacterSheetNote(1);
+
+      // Assert
+      expect(result).toContain('#1');
+      expect(result).toContain('character sheet');
+      expect(result).not.toContain('#2');
+      expect(result).toContain('ONE single');
+      expect(result).toContain('not a grid');
+    });
+
+    it('returns a note with range #1-#N when N>1 characters are referenced', () => {
+      // Arrange & Act
+      const result = buildSceneCharacterSheetNote(3);
+
+      // Assert
+      expect(result).toContain('#1');
+      expect(result).toContain('#3');
+      expect(result).toContain('character sheet');
+      expect(result).not.toContain('#4');
+      expect(result).toContain('ONE single');
     });
   });
 });

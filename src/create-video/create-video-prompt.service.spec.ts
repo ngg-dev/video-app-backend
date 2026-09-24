@@ -15,6 +15,7 @@ import {
   buildSceneAspectRatioHint,
   buildSceneLine,
   buildSceneStyleTag,
+  buildSceneCharacterSheetNote,
 } from './constants/scene-prompt.constant';
 
 describe('CreateVideoPromptService', () => {
@@ -381,5 +382,46 @@ describe('CreateVideoPromptService', () => {
 
     // Assert
     expect(result).toBe('<IMAGE_1> comes to life: a hero walks');
+  });
+
+  it('includes character sheet note when characterReferenceCount > 0', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('A scene unfolds');
+
+    // Act
+    const result = await service.buildScenePrompt({
+      scenario: 'a hero walks',
+      characterNames: [],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: VideoAspectRatio.Vertical,
+      characterReferenceCount: 2,
+      hasStyleAnchor: false,
+      hasPreviousScene: false,
+    });
+
+    // Assert
+    expect(result).toContain(buildSceneCharacterSheetNote(2));
+  });
+
+  it('does not include character sheet note when characterReferenceCount is 0', async () => {
+    // Arrange
+    deepSeekMock.generate.mockResolvedValue('A scene unfolds');
+
+    // Act
+    const result = await service.buildScenePrompt({
+      scenario: 'a hero walks',
+      characterNames: [],
+      collectionStyle: 'noir',
+      styleDescription: null,
+      aspectRatio: VideoAspectRatio.Vertical,
+      characterReferenceCount: 0,
+      hasStyleAnchor: false,
+      hasPreviousScene: false,
+    });
+
+    // Assert
+    expect(result).not.toContain('character sheet');
+    expect(result).not.toContain('multi-panel');
   });
 });

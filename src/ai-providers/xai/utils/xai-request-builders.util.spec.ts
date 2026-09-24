@@ -50,6 +50,28 @@ describe('buildGenerateImageOptions', () => {
     // Assert
     expect(result.aspectRatio).toBe('9:16');
   });
+
+  it('includes resolution in providerOptions.xai when resolution is given', () => {
+    // Arrange
+    const params = { prompt: 'a hero', resolution: '2k' as const };
+
+    // Act
+    const result = buildGenerateImageOptions(params);
+
+    // Assert
+    expect(result.providerOptions).toEqual({ xai: { resolution: '2k' } });
+  });
+
+  it('does not include providerOptions when resolution is not given', () => {
+    // Arrange
+    const params = { prompt: 'a hero' };
+
+    // Act
+    const result = buildGenerateImageOptions(params);
+
+    // Assert
+    expect(result).not.toHaveProperty('providerOptions');
+  });
 });
 
 describe('buildGenerateVideoOptions', () => {

@@ -32,9 +32,7 @@ export function buildScenarioPlanRosterHint(
   }
 
   const roster = characters
-    .map(({ name, description }) =>
-      description ? `${name} — ${description}` : name,
-    )
+    .map(({ name, appearance }) => `${name} — ${appearance.ageAndGender}`)
     .join('\n');
 
   return `Character roster (use only these names in "speakers" and in "text"):\n${roster}`;

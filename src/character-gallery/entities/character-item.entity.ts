@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import type { CharacterAppearance } from '../types/character-appearance.types';
 
 @Entity('character_items')
 export class CharacterItemEntity {
@@ -17,8 +18,8 @@ export class CharacterItemEntity {
   @Column({ type: 'text', nullable: true })
   imageUrl!: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  description!: string | null;
+  @Column({ type: 'jsonb' })
+  appearance!: CharacterAppearance;
 
   @Column({ type: 'varchar', nullable: true })
   style!: string | null;

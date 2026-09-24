@@ -18,7 +18,16 @@ describe('ScenarioPlanPromptService', () => {
     ({
       id: `char-${name}`,
       name,
-      description,
+      appearance: {
+        ageAndGender: description,
+        face: 'face',
+        hair: 'hair',
+        build: 'build',
+        outfit: 'outfit',
+        footwear: 'footwear',
+        accessories: 'accessories',
+        palette: 'palette',
+      },
       imageUrl: '',
       collectionId: 'c-1',
       createdAt: new Date(),

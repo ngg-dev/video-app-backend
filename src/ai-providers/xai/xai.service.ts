@@ -66,6 +66,7 @@ export class XaiService {
     prompt,
     referenceImages,
     aspectRatio,
+    resolution,
   }: GenerateImageParams): Promise<GeneratedFile | null> {
     const { image } = await this.logger.trackExternalCall(
       {
@@ -76,6 +77,8 @@ export class XaiService {
           promptLength: prompt.length,
           prompt,
           referenceImagesCount: referenceImages?.length ?? 0,
+          aspectRatio,
+          resolution,
         },
       },
       () =>
@@ -85,6 +88,7 @@ export class XaiService {
             prompt,
             referenceImages,
             aspectRatio,
+            resolution,
           }),
         }),
     );

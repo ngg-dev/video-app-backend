@@ -9,6 +9,7 @@ import {
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { CreateCharacterCollectionDto } from './dto/character-collection.dto';
 import { CharacterImageService } from './character-image.service';
+import type { CharacterSheetStyle } from './types/character-appearance.types';
 
 @Injectable()
 @LogMethods()
@@ -22,17 +23,17 @@ export class CharacterGalleryService {
   ) {}
 
   async createCharacter(dto: CreateCharacterDto): Promise<CharacterItemEntity> {
-    const { name, prompt, style: dtoStyle, collectionId } = dto;
-    const style = await this.resolveCharacterStyle(dtoStyle, collectionId);
-    const imageUrl = await this.characterImageService.generateCharacterImage(
-      prompt,
-      style,
+    const { name, appearance, style: dtoStyle, collectionId } = dto;
+    const resolved = await this.resolveCharacterStyle(dtoStyle, collectionId);
+    const imageUrl = await this.characterImageService.generateCharacterSheet(
+      appearance,
+      resolved,
     );
 
     const entity = this.characterItemRepository.create({
       name,
-      description: prompt,
-      style,
+      appearance,
+      style: resolved.style,
       collectionId: collectionId ?? null,
       imageUrl,
     });
@@ -43,7 +44,7 @@ export class CharacterGalleryService {
   private async resolveCharacterStyle(
     style: string | undefined,
     collectionId: string | undefined,
-  ): Promise<string | null> {
+  ): Promise<CharacterSheetStyle> {
     if (collectionId) {
       const collection = await this.characterCollectionItemRepository.findOne({
         where: { id: collectionId },
@@ -53,10 +54,13 @@ export class CharacterGalleryService {
         throw new NotFoundException('Character collection not found.');
       }
 
-      return collection.style;
+      return {
+        style: collection.style,
+        styleDescription: collection.styleDescription,
+      };
     }
 
-    return style ?? null;
+    return { style: style ?? null, styleDescription: null };
   }
 
   async createCharacterCollection(

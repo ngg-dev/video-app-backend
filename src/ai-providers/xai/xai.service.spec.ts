@@ -238,4 +238,28 @@ describe('XaiService.generateImage', () => {
     expect(callArg.prompt).toBe('a hero');
     expect(callArg).not.toHaveProperty('aspectRatio');
   });
+
+  it('passes aspectRatio and resolution to the provider', async () => {
+    // Arrange
+    (generateImage as jest.Mock).mockResolvedValue({
+      image: { mediaType: 'image/png' },
+    });
+
+    // Act
+    await service.generateImage({
+      prompt: 'a character sheet',
+      aspectRatio: '16:9',
+      resolution: '2k',
+    });
+
+    // Assert
+    expect(generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'mock-image-model',
+        prompt: 'a character sheet',
+        aspectRatio: '16:9',
+        providerOptions: { xai: { resolution: '2k' } },
+      }),
+    );
+  });
 });

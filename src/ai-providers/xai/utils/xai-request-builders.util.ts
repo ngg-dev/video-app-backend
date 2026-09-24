@@ -7,6 +7,7 @@ export function buildGenerateImageOptions({
   prompt,
   referenceImages,
   aspectRatio,
+  resolution,
 }: GenerateImageParams) {
   const hasReferenceImages = !!referenceImages?.length;
 
@@ -15,6 +16,7 @@ export function buildGenerateImageOptions({
       ? { text: prompt, images: referenceImages }
       : prompt,
     ...(aspectRatio ? { aspectRatio } : {}),
+    ...(resolution ? { providerOptions: { xai: { resolution } } } : {}),
   };
 }
 

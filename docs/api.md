@@ -34,9 +34,9 @@
 
 ### `POST /character-gallery/create`
 
-Тело: `{ name: string, prompt: string, style?: string, collectionId?: string }`
+Тело: `{ name: string, appearance: { ageAndGender, face, hair, build, outfit, footwear, accessories, palette }, style?: string, collectionId?: string }` — все 8 полей `appearance` обязательные непустые строки (до 1000 символов).
 Если указан `collectionId` — стиль берётся из коллекции (переопределяет `style` из тела).
-Ответ: `CharacterItemEntity` (генерирует turnaround-картинку через xAI и грузит в S3).
+Ответ: `CharacterItemEntity` (одним запросом к xAI генерирует мастер-лист персонажа — 4 ракурса в полный рост и 8 эмоций, 16:9, 2k — и грузит в S3; URL в `imageUrl`).
 
 ### `POST /character-gallery/collection/create`
 
