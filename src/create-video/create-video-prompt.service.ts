@@ -5,15 +5,14 @@ import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
   buildSceneAspectRatioHint,
-  buildSceneCharacterSheetNote,
   buildSceneImageCharactersHint,
   buildSceneLine,
   buildSceneStyleHint,
-  buildSceneStyleReferenceNote,
   buildSceneStyleTag,
   buildSceneVideoCharactersHint,
   buildVideoPromptFallback,
 } from './constants/scene-prompt.constant';
+import { buildSceneReferenceBlock } from './utils/scene-reference.util';
 import { BuildScenePromptParams } from './types/create-video.types';
 
 @LogMethods()
@@ -27,9 +26,7 @@ export class CreateVideoPromptService {
     collectionStyle,
     styleDescription,
     aspectRatio,
-    characterReferenceCount,
-    hasStyleAnchor,
-    hasPreviousScene,
+    references,
   }: BuildScenePromptParams): Promise<string> {
     const charactersHint = buildSceneImageCharactersHint(characterNames);
     const styleHint = buildSceneStyleHint(collectionStyle, styleDescription);
@@ -51,23 +48,12 @@ export class CreateVideoPromptService {
     });
 
     const styleTag = buildSceneStyleTag(collectionStyle, styleDescription);
-    const characterSheetNote = buildSceneCharacterSheetNote(
-      characterReferenceCount,
-    );
-    const referenceNote = buildSceneStyleReferenceNote({
-      characterReferenceCount,
-      hasStyleAnchor,
-      hasPreviousScene,
-    });
-
-    return [
-      generatedPrompt || scenario,
-      styleTag,
-      characterSheetNote,
-      referenceNote,
-    ]
+    const referenceBlock = buildSceneReferenceBlock(references);
+    const description = [generatedPrompt || scenario, styleTag]
       .filter(Boolean)
       .join(' ');
+
+    return [referenceBlock, description].filter(Boolean).join('\n');
   }
 
   async buildVideoPrompt(

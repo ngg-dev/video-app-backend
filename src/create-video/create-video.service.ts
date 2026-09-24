@@ -14,12 +14,14 @@ import { CreateVideoCacheService } from './create-video-cache.service';
 import { CreateVideoPromptService } from './create-video-prompt.service';
 import { normalizeScenario } from './utils/scenario.util';
 import {
-  buildSceneReferenceImages,
-  selectCharacterReferenceImages,
-} from './utils/scene-reference-images.util';
+  buildSceneReferences,
+  limitSceneReferences,
+} from './utils/scene-reference.util';
+import { SCENE_REFERENCE_LIMIT } from './constants/scene-reference.constant';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
-import { isNotNullOrUndefined, isNotUndefined } from 'src/shared/utils';
+import { isNotUndefined } from 'src/shared/utils';
+import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { PreparedSceneImage } from './types/create-video.types';
 
 @Injectable()
@@ -30,6 +32,7 @@ export class CreateVideoService {
     private readonly storageService: StorageService,
     private readonly createVideoCacheService: CreateVideoCacheService,
     private readonly characterCollectionReaderService: CharacterCollectionReaderService,
+    private readonly logger: AppLoggerService,
   ) {}
 
   async prepareSceneImage(data: CreateRequestDto): Promise<PreparedSceneImage> {
@@ -68,16 +71,30 @@ export class CreateVideoService {
       collectionCharacters = loaded.characters;
     }
 
-    const styleAnchorImageUrl =
-      isNotNullOrUndefined(data.styleAnchorImageUrl) &&
-      data.styleAnchorImageUrl !== ''
-        ? data.styleAnchorImageUrl
-        : undefined;
+    const { persons: collectionPersons } = selectMentionedCharacters(
+      scenario,
+      collectionCharacters,
+    );
 
-    const { persons: collectionPersons, referenceImages } =
-      selectMentionedCharacters(scenario, collectionCharacters);
-    const characterReferenceImages =
-      selectCharacterReferenceImages(referenceImages);
+    const { references, dropped } = limitSceneReferences(
+      buildSceneReferences({
+        characters: collectionPersons,
+        styleAnchorImageUrl: data.styleAnchorImageUrl,
+        previousSceneImageUrl: data.styleReferenceImageUrl,
+      }),
+    );
+
+    if (dropped.length > 0) {
+      this.logger.warn(
+        {
+          message: 'Scene references exceed the limit, some were dropped',
+          limit: SCENE_REFERENCE_LIMIT,
+          kept: references.length,
+          dropped: dropped.map(({ role, name, url }) => ({ role, name, url })),
+        },
+        CreateVideoService.name,
+      );
+    }
 
     const scenePrompt = await this.createVideoPromptService.buildScenePrompt({
       scenario,
@@ -85,18 +102,12 @@ export class CreateVideoService {
       collectionStyle: collection.style,
       styleDescription: collection.styleDescription ?? null,
       aspectRatio,
-      characterReferenceCount: characterReferenceImages.length,
-      hasStyleAnchor: isNotUndefined(styleAnchorImageUrl),
-      hasPreviousScene: isNotUndefined(data.styleReferenceImageUrl),
+      references,
     });
 
     const sceneImage = await this.xaiService.generateImage({
       prompt: scenePrompt,
-      referenceImages: buildSceneReferenceImages({
-        characterReferenceImages,
-        styleAnchorImageUrl,
-        previousSceneImageUrl: data.styleReferenceImageUrl,
-      }),
+      referenceImages: references.map(({ url }) => url),
       aspectRatio,
     });
 

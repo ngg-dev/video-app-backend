@@ -65,56 +65,27 @@ export function buildSceneStyleTag(
   return `Visual style: ${collectionStyle}.${descriptionClause} Keep this exact visual style.`;
 }
 
-export const SCENE_STYLE_REFERENCE_NOTE =
-  'The last reference image is provided only as a visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.';
-
-export function buildSceneStyleAnchorNote(anchorPosition: number): string {
-  return `The reference image #${anchorPosition} is the style anchor and the main visual style reference (color palette, rendering technique, line and shading manner); do not copy its composition, background, characters or story.`;
-}
-
-export function buildSceneStyleAnchorWithPreviousNote(
-  anchorPosition: number,
-  previousScenePosition: number,
+export function buildSceneCharacterReferenceLine(
+  position: number,
+  name?: string,
 ): string {
-  return `The reference image #${anchorPosition} is the style anchor and the main visual style reference (color palette, rendering technique, line and shading manner). The reference image #${previousScenePosition} is the previous scene, provided only for visual continuity; neither of them should be used for composition, background, characters or story, so do not copy those.`;
+  return `Image ${position}: ${name || 'character'} — keep face, hair, body, outfit exactly.`;
 }
 
-export interface SceneStyleReferenceNoteParams {
-  characterReferenceCount: number;
-  hasStyleAnchor: boolean;
-  hasPreviousScene: boolean;
+export function buildSceneLocationReferenceLine(position: number): string {
+  return `Image ${position}: location — reproduce environment and architecture.`;
 }
 
-export function buildSceneStyleReferenceNote({
-  characterReferenceCount,
-  hasStyleAnchor,
-  hasPreviousScene,
-}: SceneStyleReferenceNoteParams): string {
-  if (!hasStyleAnchor) {
-    return hasPreviousScene ? SCENE_STYLE_REFERENCE_NOTE : '';
-  }
-
-  const anchorPosition = characterReferenceCount + 1;
-
-  return hasPreviousScene
-    ? buildSceneStyleAnchorWithPreviousNote(anchorPosition, anchorPosition + 1)
-    : buildSceneStyleAnchorNote(anchorPosition);
+export function buildSceneStyleAnchorReferenceLine(position: number): string {
+  return `Image ${position}: style anchor — use only color palette, rendering technique, line and shading; do not copy its composition, background, characters or story.`;
 }
 
-export function buildSceneCharacterSheetNote(
-  characterReferenceCount: number,
-): string {
-  if (characterReferenceCount < 1) {
-    return '';
-  }
-
-  const target =
-    characterReferenceCount === 1
-      ? 'The reference image #1 is a character sheet'
-      : `The reference images #1-#${characterReferenceCount} are character sheets`;
-
-  return `${target}: a multi-panel image showing one character from several angles and with different facial expressions on a neutral background. Use them only to keep the character's appearance consistent. The result must be ONE single, cohesive scene frame, not a grid, collage or multi-panel sheet; do not copy the panel layout or the neutral sheet background.`;
+export function buildScenePreviousSceneReferenceLine(position: number): string {
+  return `Image ${position}: previous scene — keep only lighting, color grading and outfits; do not copy pose or composition.`;
 }
+
+export const SCENE_CHARACTER_SHEET_FRAME_NOTE =
+  "Character reference images are character sheets (one character from several angles and with different facial expressions on a neutral background): use them only to keep the characters' appearance consistent. The result must be ONE single, cohesive scene frame, not a grid, collage or multi-panel sheet; do not copy the panel layout or the neutral sheet background.";
 
 export function buildSceneAspectRatioHint(
   aspectRatio: VideoAspectRatio,

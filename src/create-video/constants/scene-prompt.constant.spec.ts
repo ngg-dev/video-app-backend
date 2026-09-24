@@ -1,154 +1,10 @@
 import {
   buildSceneStyleTag,
   buildSceneStyleHint,
-  buildSceneStyleReferenceNote,
-  SCENE_STYLE_REFERENCE_NOTE,
-  buildSceneCharacterSheetNote,
+  buildSceneCharacterReferenceLine,
 } from './scene-prompt.constant';
 
-describe('buildSceneStyleReferenceNote, buildSceneStyleTag, buildSceneStyleHint', () => {
-  describe('buildSceneStyleReferenceNote', () => {
-    it('returns empty string when no style anchors are present', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: false,
-        hasPreviousScene: false,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toBe('');
-    });
-
-    it('returns the current SCENE_STYLE_REFERENCE_NOTE when only N-1 is present', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: false,
-        hasPreviousScene: true,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toBe(SCENE_STYLE_REFERENCE_NOTE);
-    });
-
-    it('returns anchor note with position #1 when only anchor is present with 0 characters', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 0,
-        hasStyleAnchor: true,
-        hasPreviousScene: false,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toContain('reference image #1');
-      expect(result).not.toContain('#2');
-      expect(result).toMatch(/composition/i);
-      expect(result).toMatch(/background/i);
-      expect(result).toMatch(/characters/i);
-      expect(result).toMatch(/story/i);
-      expect(result).toMatch(/anchor/i);
-    });
-
-    it('returns anchor note with position #3 when anchor is present with 2 characters', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: true,
-        hasPreviousScene: false,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toContain('reference image #3');
-      expect(result).not.toContain('reference image #4');
-    });
-
-    it('returns both anchor and N-1 notes with positions #1 and #2 when both present with 0 characters', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 0,
-        hasStyleAnchor: true,
-        hasPreviousScene: true,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toContain('reference image #1');
-      expect(result).toContain('reference image #2');
-    });
-
-    it('returns both anchor and N-1 notes with positions #3 and #4 when both present with 2 characters', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: true,
-        hasPreviousScene: true,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).toContain('reference image #3');
-      expect(result).toContain('reference image #4');
-      const index3 = result.indexOf('#3');
-      const index4 = result.indexOf('#4');
-      expect(index3 < index4).toBe(true);
-      expect(result.substring(index3, index4)).toMatch(
-        /anchor|main visual style/i,
-      );
-      expect(result.substring(index4)).toMatch(/previous scene|continuity/i);
-    });
-
-    it('does not use the word "collection" in anchor notes', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: true,
-        hasPreviousScene: false,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).not.toContain('collection');
-      expect(result).toContain('anchor');
-      expect(result).toContain('style anchor');
-    });
-
-    it('does not use the word "collection" when both anchor and previous scene are present', () => {
-      // Arrange
-      const params = {
-        characterReferenceCount: 2,
-        hasStyleAnchor: true,
-        hasPreviousScene: true,
-      };
-
-      // Act
-      const result = buildSceneStyleReferenceNote(params);
-
-      // Assert
-      expect(result).not.toContain('collection');
-      expect(result).toContain('style anchor');
-      expect(result).toContain('previous scene');
-    });
-  });
-
+describe('buildSceneStyleTag, buildSceneStyleHint', () => {
   describe('buildSceneStyleTag', () => {
     it('contains the style and description literally', () => {
       // Arrange
@@ -206,37 +62,19 @@ describe('buildSceneStyleReferenceNote, buildSceneStyleTag, buildSceneStyleHint'
     });
   });
 
-  describe('buildSceneCharacterSheetNote', () => {
-    it('returns empty string when no characters are referenced', () => {
-      // Arrange & Act
-      const result = buildSceneCharacterSheetNote(0);
+  describe('buildSceneCharacterReferenceLine', () => {
+    it('uses "character" placeholder when name is empty', () => {
+      // Arrange
+      const position = 2;
+      const name = '';
+
+      // Act
+      const result = buildSceneCharacterReferenceLine(position, name);
 
       // Assert
-      expect(result).toBe('');
-    });
-
-    it('returns a note mentioning #1 when exactly 1 character is referenced', () => {
-      // Arrange & Act
-      const result = buildSceneCharacterSheetNote(1);
-
-      // Assert
-      expect(result).toContain('#1');
-      expect(result).toContain('character sheet');
-      expect(result).not.toContain('#2');
-      expect(result).toContain('ONE single');
-      expect(result).toContain('not a grid');
-    });
-
-    it('returns a note with range #1-#N when N>1 characters are referenced', () => {
-      // Arrange & Act
-      const result = buildSceneCharacterSheetNote(3);
-
-      // Assert
-      expect(result).toContain('#1');
-      expect(result).toContain('#3');
-      expect(result).toContain('character sheet');
-      expect(result).not.toContain('#4');
-      expect(result).toContain('ONE single');
+      expect(result).toBe(
+        'Image 2: character — keep face, hair, body, outfit exactly.',
+      );
     });
   });
 });

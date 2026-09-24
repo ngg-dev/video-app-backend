@@ -23,6 +23,7 @@ import type { StorageService } from 'src/storage/storage.service';
 import type { CreateVideoCacheService } from './create-video-cache.service';
 import type { CreateVideoPromptService } from './create-video-prompt.service';
 import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
+import type { AppLoggerService } from 'src/shared/logger/logger.service';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 
 describe('CreateVideoService.createVideoPipe', () => {
@@ -83,6 +84,7 @@ describe('CreateVideoService.createVideoPipe', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      { warn: jest.fn() } as unknown as AppLoggerService,
     );
   });
 
@@ -303,9 +305,9 @@ describe('CreateVideoService.createVideoPipe', () => {
       collectionStyle: 'noir',
       styleDescription: null,
       aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: false,
-      hasPreviousScene: false,
+      references: [
+        { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+      ],
     });
     expect(xaiService.generateImage).toHaveBeenCalledWith({
       prompt: 'scene prompt',
@@ -447,9 +449,9 @@ describe('CreateVideoService.createVideoPipe', () => {
       collectionStyle: 'noir',
       styleDescription: null,
       aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: false,
-      hasPreviousScene: false,
+      references: [
+        { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+      ],
     });
   });
 
@@ -535,6 +537,7 @@ describe('CreateVideoService.prepareSceneImage', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      { warn: jest.fn() } as unknown as AppLoggerService,
     );
   });
 
@@ -578,7 +581,7 @@ describe('CreateVideoService.prepareSceneImage', () => {
     );
   });
 
-  it('passes hasStyleReference=true to buildScenePrompt when styleReferenceImageUrl is provided', async () => {
+  it('passes the previous scene reference to buildScenePrompt when styleReferenceImageUrl is provided', async () => {
     // Arrange
     const requestData: CreateRequestDto = {
       scenario: 'Bob walks',
@@ -596,13 +599,14 @@ describe('CreateVideoService.prepareSceneImage', () => {
       collectionStyle: 'noir',
       styleDescription: null,
       aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: false,
-      hasPreviousScene: true,
+      references: [
+        { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+        { role: 'previousScene', url: 'https://storage.example/prev.png' },
+      ],
     });
   });
 
-  it('passes hasStyleReference=false to buildScenePrompt when styleReferenceImageUrl is not provided', async () => {
+  it('passes only the character reference to buildScenePrompt when styleReferenceImageUrl is not provided', async () => {
     // Arrange
     const requestData: CreateRequestDto = {
       scenario: 'Bob walks',
@@ -619,9 +623,9 @@ describe('CreateVideoService.prepareSceneImage', () => {
       collectionStyle: 'noir',
       styleDescription: null,
       aspectRatio: '9:16',
-      characterReferenceCount: 1,
-      hasStyleAnchor: false,
-      hasPreviousScene: false,
+      references: [
+        { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+      ],
     });
   });
 
@@ -678,7 +682,9 @@ describe('CreateVideoService.prepareSceneImage', () => {
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
       expect.objectContaining({
         characterNames: ['Hero', 'Ann'],
-        characterReferenceCount: 1,
+        references: [
+          { role: 'character', url: 'https://img/ann.png', name: 'Ann' },
+        ],
       }),
     );
   });
@@ -730,7 +736,7 @@ describe('CreateVideoService.prepareSceneImage', () => {
     );
   });
 
-  it('passes hasStyleAnchor=true to buildScenePrompt when styleAnchorImageUrl is provided', async () => {
+  it('passes the style anchor reference to buildScenePrompt when styleAnchorImageUrl is provided', async () => {
     // Arrange
     const requestData: CreateRequestDto = {
       scenario: 'Bob walks',
@@ -744,7 +750,10 @@ describe('CreateVideoService.prepareSceneImage', () => {
     // Assert
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        hasStyleAnchor: true,
+        references: [
+          { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+          { role: 'styleAnchor', url: 'https://s3/anchor.png' },
+        ],
       }),
     );
   });
@@ -768,7 +777,9 @@ describe('CreateVideoService.prepareSceneImage', () => {
     );
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        hasStyleAnchor: false,
+        references: [
+          { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+        ],
       }),
     );
   });
@@ -800,10 +811,252 @@ describe('CreateVideoService.prepareSceneImage', () => {
     ).toHaveBeenCalledWith('collection-1');
     expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        hasStyleAnchor: false,
+        references: [
+          { role: 'character', url: 'https://img/bob.png', name: 'Bob' },
+        ],
       }),
     );
     expect(xaiService.generateImage).toHaveBeenCalledTimes(1);
+  });
+
+  // 22. Same reference array for xAI and prompt
+  it('uses the same reference array for xAI and prompt', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [
+          { name: 'Anna', imageUrl: 'a.png' },
+          { name: 'Bob', imageUrl: 'b.png' },
+        ],
+      },
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'Anna and Bob walk',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'anchor.png',
+      styleReferenceImageUrl: 'prev.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['a.png', 'b.png', 'anchor.png', 'prev.png'],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        references: [
+          { role: 'character', url: 'a.png', name: 'Anna' },
+          { role: 'character', url: 'b.png', name: 'Bob' },
+          { role: 'styleAnchor', url: 'anchor.png' },
+          { role: 'previousScene', url: 'prev.png' },
+        ],
+        characterNames: ['Anna', 'Bob'],
+      }),
+    );
+  });
+
+  // 23. Mentioned character without image
+  it('includes mentioned character name without image in characterNames', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [
+          { name: 'Anna', imageUrl: 'a.png' },
+          { name: 'Bob', imageUrl: null },
+        ],
+      },
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'Anna and Bob walk',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: ['a.png'],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        references: [{ role: 'character', url: 'a.png', name: 'Anna' }],
+        characterNames: ['Anna', 'Bob'],
+      }),
+    );
+  });
+
+  // 24. Empty style anchor not passed
+  it('does not pass empty style anchor image URL to references', async () => {
+    // Arrange
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [],
+      },
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'Empty scene',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: '',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceImages: [],
+      }),
+    );
+    expect(createVideoPromptService.buildScenePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        references: [],
+      }),
+    );
+  });
+
+  // 25. Overflow with warn
+  it('logs a warning when references exceed the limit', async () => {
+    // Arrange
+    const mockLogger = { warn: jest.fn() };
+    service = new CreateVideoService(
+      createVideoPromptService as unknown as CreateVideoPromptService,
+      xaiService as unknown as XaiService,
+      storageService as unknown as StorageService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      mockLogger as unknown as AppLoggerService,
+    );
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [
+          { name: 'P1', imageUrl: 'p1.png' },
+          { name: 'P2', imageUrl: 'p2.png' },
+          { name: 'P3', imageUrl: 'p3.png' },
+          { name: 'P4', imageUrl: 'p4.png' },
+          { name: 'P5', imageUrl: 'p5.png' },
+        ],
+      },
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'P1 and P2 and P3 and P4 and P5 walk',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'anchor.png',
+      styleReferenceImageUrl: 'prev.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    const [warnArg] = mockLogger.warn.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(warnArg.message).toEqual(
+      expect.stringContaining('Scene references exceed the limit'),
+    );
+    expect(warnArg).toMatchObject({ limit: 5, kept: 5 });
+    expect(warnArg.dropped).toBeDefined();
+    expect(Array.isArray(warnArg.dropped)).toBe(true);
+    const dropped = warnArg.dropped as Array<{ role: string; url: string }>;
+    expect(dropped.some((d) => d.url === 'anchor.png')).toBe(true);
+    expect(dropped.some((d) => d.url === 'prev.png')).toBe(true);
+  });
+
+  // 26. No warn without overflow
+  it('does not log a warning when references do not exceed the limit', async () => {
+    // Arrange
+    const mockLogger = { warn: jest.fn() };
+    service = new CreateVideoService(
+      createVideoPromptService as unknown as CreateVideoPromptService,
+      xaiService as unknown as XaiService,
+      storageService as unknown as StorageService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      mockLogger as unknown as AppLoggerService,
+    );
+    characterCollectionReaderService.loadCollectionWithCharacters.mockResolvedValue(
+      {
+        collection: {
+          id: 'collection-1',
+          style: 'noir',
+          styleDescription: null,
+        },
+        characters: [{ name: 'Bob', imageUrl: 'bob.png' }],
+      },
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      styleAnchorImageUrl: 'anchor.png',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  // 27. Cache hit path
+  it('skips generation when cache returns a result', async () => {
+    // Arrange
+    createVideoCacheService.get.mockResolvedValue({
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+      duration: 5,
+      characterNames: ['Bob'],
+      sceneImageUrl: 'https://cached/image.png',
+    });
+    const mockLogger = { warn: jest.fn() };
+    service = new CreateVideoService(
+      createVideoPromptService as unknown as CreateVideoPromptService,
+      xaiService as unknown as XaiService,
+      storageService as unknown as StorageService,
+      createVideoCacheService as unknown as CreateVideoCacheService,
+      characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      mockLogger as unknown as AppLoggerService,
+    );
+    const requestData: CreateRequestDto = {
+      scenario: 'Bob walks',
+      collectionId: 'collection-1',
+    };
+
+    // Act
+    await service.prepareSceneImage(requestData);
+
+    // Assert
+    expect(xaiService.generateImage).not.toHaveBeenCalled();
+    expect(createVideoPromptService.buildScenePrompt).not.toHaveBeenCalled();
+    expect(mockLogger.warn).not.toHaveBeenCalled();
   });
 });
 
@@ -860,6 +1113,7 @@ describe('CreateVideoService.renderSceneVideo', () => {
       storageService as unknown as StorageService,
       createVideoCacheService as unknown as CreateVideoCacheService,
       characterCollectionReaderService as unknown as CharacterCollectionReaderService,
+      { warn: jest.fn() } as unknown as AppLoggerService,
     );
   });
 
