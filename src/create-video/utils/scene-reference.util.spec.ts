@@ -138,7 +138,7 @@ describe('limitSceneReferences', () => {
   });
 
   // 7. 6 with location: previousScene is dropped
-  it('drops previous scene when 6 references include location', () => {
+  it('drops предыдущая сцена when 6 references include location', () => {
     // Arrange
     const characters = [
       { name: 'Anna', imageUrl: 'a.png' },
@@ -168,8 +168,8 @@ describe('limitSceneReferences', () => {
     ]);
   });
 
-  // 8. Style anchor has priority over previous scene
-  it('drops previous scene before style anchor when both compete', () => {
+  // 8. Style anchor has priority over предыдущая сцена
+  it('drops предыдущая сцена before эталон стиля when both compete', () => {
     // Arrange
     const characters = [
       { name: 'P1', imageUrl: 'p1.png' },
@@ -282,7 +282,7 @@ describe('buildSceneReferenceBlock', () => {
     expect(result).toBe('');
   });
 
-  // 13. Characters + style anchor + previous scene with numbering
+  // 13. Characters + эталон стиля + предыдущая сцена with numbering
   it('builds block with correct numbering and frame note for characters', () => {
     // Arrange
     const references = [
@@ -305,8 +305,8 @@ describe('buildSceneReferenceBlock', () => {
     ].join('\n');
 
     expect(result).toBe(expected);
-    expect(result).toContain('Image 1: Anna');
-    expect(result).toContain('Image 4: previous scene');
+    expect(result).toContain('Изображение 1: Anna');
+    expect(result).toContain('Изображение 4: предыдущая сцена');
   });
 
   // 14. Location reference line
@@ -319,7 +319,7 @@ describe('buildSceneReferenceBlock', () => {
 
     // Assert
     expect(result).toBe(
-      'Image 1: location — reproduce environment and architecture.',
+      'Изображение 1: локация — воспроизведи окружение и архитектуру.',
     );
   });
 
@@ -335,8 +335,8 @@ describe('buildSceneReferenceBlock', () => {
     const result = buildSceneReferenceBlock(references);
 
     // Assert
-    expect(result).toContain('Image 1: style anchor');
-    expect(result).toContain('Image 2: previous scene');
+    expect(result).toContain('Изображение 1: эталон стиля');
+    expect(result).toContain('Изображение 2: предыдущая сцена');
     expect(result).not.toContain(SCENE_CHARACTER_SHEET_FRAME_NOTE);
   });
 
@@ -361,7 +361,7 @@ describe('buildSceneReferenceBlock', () => {
     expect(noteOccurrences).toBeGreaterThan(0);
     const lines = result.split('\n');
     expect(lines[lines.length - 1]).toContain(
-      'Character reference images are character sheets',
+      'Референсы персонажей — это мастер-листы',
     );
   });
 });

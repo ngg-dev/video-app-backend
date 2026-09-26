@@ -342,7 +342,7 @@ describe('CreateVideoService.createVideoPipe', () => {
     expect(xaiService.generateVideo).toHaveBeenCalledWith({
       prompt: 'video prompt',
       referenceImageUrls: ['https://storage.example/scenes/a.png'],
-      resolution: '720p',
+      resolution: '480p',
       duration: 5,
     });
   });
@@ -470,7 +470,7 @@ describe('CreateVideoService.createVideoPipe', () => {
       Record<string, unknown>,
     ];
     expect(videoCallArg).not.toHaveProperty('aspectRatio');
-    expect(videoCallArg.resolution).toBe('720p');
+    expect(videoCallArg.resolution).toBe('480p');
   });
 });
 
@@ -1162,7 +1162,7 @@ describe('CreateVideoService.renderSceneVideo', () => {
     expect(xaiService.generateVideo).toHaveBeenCalledWith({
       prompt: 'a prompt',
       referenceImageUrls: ['https://storage.example/scene.png'],
-      resolution: '720p',
+      resolution: '480p',
       duration: 5,
     });
     expect(createVideoCacheService.set).toHaveBeenCalledWith(

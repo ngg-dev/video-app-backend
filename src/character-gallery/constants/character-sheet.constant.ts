@@ -10,41 +10,41 @@ export const CHARACTER_APPEARANCE_FIELDS: ReadonlyArray<{
   key: keyof CharacterAppearance;
   label: string;
 }> = [
-  { key: 'ageAndGender', label: 'Age and gender' },
-  { key: 'face', label: 'Face' },
-  { key: 'hair', label: 'Hair' },
-  { key: 'build', label: 'Build and height' },
-  { key: 'outfit', label: 'Outfit' },
-  { key: 'footwear', label: 'Footwear' },
-  { key: 'accessories', label: 'Accessories' },
-  { key: 'palette', label: 'Color palette' },
+  { key: 'ageAndGender', label: 'Возраст и пол' },
+  { key: 'face', label: 'Лицо' },
+  { key: 'hair', label: 'Волосы' },
+  { key: 'build', label: 'Телосложение и рост' },
+  { key: 'outfit', label: 'Одежда' },
+  { key: 'footwear', label: 'Обувь' },
+  { key: 'accessories', label: 'Аксессуары' },
+  { key: 'palette', label: 'Цветовая палитра' },
 ];
 
 export const CHARACTER_SHEET_VIEWS: ReadonlyArray<string> = [
-  'front view',
-  'three-quarter view',
-  'side (profile) view',
-  'back view',
+  'вид спереди',
+  'вид в три четверти',
+  'вид сбоку (профиль)',
+  'вид сзади',
 ];
 
 export const CHARACTER_SHEET_EMOTIONS: ReadonlyArray<string> = [
-  'neutral',
-  'joy',
-  'sadness',
-  'anger',
-  'surprise',
-  'laughter',
-  'fear',
-  'thoughtful',
+  'нейтральное',
+  'радость',
+  'грусть',
+  'злость',
+  'удивление',
+  'смех',
+  'страх',
+  'задумчивость',
 ];
 
 export const CHARACTER_SHEET_PROMPT_TEMPLATE = [
-  'Character reference sheet of a single character on one image, on a plain neutral light background with even studio lighting.',
+  'Мастер-лист одного персонажа на одном изображении, на простом нейтральном светлом фоне с ровным студийным освещением.',
   '{style}',
-  'Character description:\n{character}',
-  'Layout: the top row shows {viewCount} full-body views of the character at the same scale, in a neutral standing pose with arms relaxed along the body: {views}. The bottom row shows {emotionCount} large head portraits of the same character with different facial expressions: {emotions}.',
-  'Consistency: the exact same face, age, hairstyle, body proportions, outfit, footwear, accessories and color palette in every panel; only the viewing angle and the facial expression change.',
-  'No text, no captions, no labels, no watermarks, no additional characters.',
+  'Описание персонажа:\n{character}',
+  'Раскладка: в верхнем ряду {viewCount} вида персонажа в полный рост в одном масштабе, в нейтральной стоячей позе с расслабленными вдоль тела руками: {views}. В нижнем ряду {emotionCount} крупных портретов головы того же персонажа с разной мимикой: {emotions}.',
+  'Согласованность: абсолютно одинаковые лицо, возраст, причёска, пропорции тела, одежда, обувь, аксессуары и цветовая палитра на каждой панели; меняются только ракурс и выражение лица.',
+  'Без текста, подписей, надписей, водяных знаков и дополнительных персонажей.',
 ].join('\n');
 
 export const CHARACTER_SHEET_ASPECT_RATIO: AspectRatio = '16:9';

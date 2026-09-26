@@ -1,33 +1,39 @@
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 
 export const SCENE_IMAGE_PROMPT_INSTRUCTIONS = [
-  'You are a prompt engineer writing a prompt for Grok Imagine (xAI text-to-image model).',
-  'Grok Imagine follows natural language, not comma-separated keyword stacks, so write flowing sentences, not tag lists.',
-  'Rewrite the scene description below into one vivid, highly specific paragraph, covering, in this order:',
-  '1) Subject — who/what is in the scene and what they are doing.',
-  '2) Environment — the setting, background, and time of day.',
-  '3) Lighting — light source and direction (e.g. soft morning backlight, harsh neon glow).',
-  '4) Camera — shot type, angle, and lens feel (e.g. low-angle wide shot, 35mm close-up).',
-  '5) Style and mood — art style, color palette, atmosphere.',
-  'Stay faithful to the original scenario: do not invent new characters, locations, or plot points not implied by it.',
-  'Respond with the prompt paragraph only, no headings, no explanations, no quotes.',
+  'Ты промпт-инженер и пишешь промпт для Grok Imagine (модель xAI для генерации изображений по тексту).',
+  'Grok Imagine понимает естественный язык, а не наборы ключевых слов через запятую, поэтому пиши связными предложениями, а не списком тегов.',
+  'Перепиши описание сцены ниже в один яркий, максимально конкретный абзац, охватив в таком порядке:',
+  '1) Субъект — кто/что находится в сцене и что делает.',
+  '2) Окружение — место действия, фон и время суток.',
+  '3) Освещение — источник и направление света (например, мягкий утренний контровой свет, резкое неоновое свечение).',
+  '4) Камера — тип кадра, ракурс и ощущение объектива (например, широкий план с нижней точки, крупный план на 35 мм).',
+  '5) Стиль и настроение — художественный стиль, цветовая палитра, атмосфера.',
+  'Оставайся верным исходному сценарию: не придумывай новых персонажей, локации и сюжетные ходы, которые из него не следуют.',
+  'Отвечай только абзацем с промптом, без заголовков, пояснений и кавычек.',
 ];
 
+export const SCENE_VIDEO_NO_SPEECH_RULE =
+  'Не включай в промпт реплики и речь персонажей: персонажи не говорят и не озвучиваются.';
+
+export const SCENE_VIDEO_STATIC_CAMERA_RULE = 'Камера остаётся неподвижной.';
+
 export const SCENE_VIDEO_PROMPT_INSTRUCTIONS = [
-  'You are a prompt engineer writing a motion prompt for Grok Imagine (xAI reference-to-video model) that will animate an already-generated still image.',
-  'The still image is passed to the model as a reference image and must be referred to in the prompt using the literal tag <IMAGE_1> (e.g. "the character from <IMAGE_1> turns and walks forward"). Include <IMAGE_1> at least once.',
-  'Grok Imagine follows natural language, not comma-separated keyword stacks, so write flowing sentences, not tag lists.',
-  'Rewrite the scene description below into one vivid paragraph describing only the movement, action, and camera motion that should happen as <IMAGE_1> comes to life.',
-  'Do not change or re-describe the characters appearance, the art style, or the composition of the scene — <IMAGE_1> already defines those.',
-  'Do not invent new characters or locations that are not already implied by the scene.',
-  'Respond with the prompt paragraph only, no headings, no explanations, no quotes.',
+  'Ты промпт-инженер и пишешь промпт движения для Grok Imagine (модель xAI для генерации видео по референсу), который оживит уже сгенерированное статичное изображение.',
+  'Статичное изображение передаётся модели как референс, и в промпте на него нужно ссылаться буквальным тегом <IMAGE_1> (например, «персонаж из <IMAGE_1> поворачивается и идёт вперёд»). Используй <IMAGE_1> хотя бы один раз.',
+  'Перепиши описание сцены ниже в один яркий абзац, описывающий только действие и движение персонажей и объектов, которые должны происходить, когда <IMAGE_1> оживает.',
+  SCENE_VIDEO_NO_SPEECH_RULE,
+  `${SCENE_VIDEO_STATIC_CAMERA_RULE} Указания камеры из описания сцены игнорируй.`,
+  'Не меняй и не описывай заново внешность персонажей, художественный стиль и композицию сцены — их уже задаёт <IMAGE_1>.',
+  'Не придумывай новых персонажей и локации, которые уже не подразумеваются сценой.',
+  'Отвечай только абзацем с промптом, без заголовков, пояснений и кавычек.',
 ];
 
 export function buildSceneImageCharactersHint(
   characterNames: string[],
 ): string {
   return characterNames.length
-    ? `Characters present in the scene (keep their appearance consistent with the reference images): ${characterNames.join(', ')}.`
+    ? `Персонажи в сцене (сохраняй их внешность согласованной с референсами): ${characterNames.join(', ')}.`
     : '';
 }
 
@@ -35,7 +41,7 @@ export function buildSceneVideoCharactersHint(
   characterNames: string[],
 ): string {
   return characterNames.length
-    ? `Characters present in the scene (keep their appearance unchanged): ${characterNames.join(', ')}.`
+    ? `Персонажи в сцене: ${characterNames.join(', ')}.`
     : '';
 }
 
@@ -49,7 +55,7 @@ export function buildSceneStyleHint(
 
   const descriptionClause = styleDescription ? ` ${styleDescription}` : '';
 
-  return `Render the image in the following visual style: ${collectionStyle}.${descriptionClause}`;
+  return `Оформи изображение в следующем визуальном стиле: ${collectionStyle}.${descriptionClause}`;
 }
 
 export function buildSceneStyleTag(
@@ -62,41 +68,41 @@ export function buildSceneStyleTag(
 
   const descriptionClause = styleDescription ? ` ${styleDescription}` : '';
 
-  return `Visual style: ${collectionStyle}.${descriptionClause} Keep this exact visual style.`;
+  return `Визуальный стиль: ${collectionStyle}.${descriptionClause} Строго сохраняй этот визуальный стиль.`;
 }
 
 export function buildSceneCharacterReferenceLine(
   position: number,
   name?: string,
 ): string {
-  return `Image ${position}: ${name || 'character'} — keep face, hair, body, outfit exactly.`;
+  return `Изображение ${position}: ${name || 'персонаж'} — точно сохраняй лицо, волосы, телосложение, одежду.`;
 }
 
 export function buildSceneLocationReferenceLine(position: number): string {
-  return `Image ${position}: location — reproduce environment and architecture.`;
+  return `Изображение ${position}: локация — воспроизведи окружение и архитектуру.`;
 }
 
 export function buildSceneStyleAnchorReferenceLine(position: number): string {
-  return `Image ${position}: style anchor — use only color palette, rendering technique, line and shading; do not copy its composition, background, characters or story.`;
+  return `Изображение ${position}: эталон стиля — используй только цветовую палитру, технику рендеринга, линии и светотень; не копируй композицию, фон, персонажей и сюжет.`;
 }
 
 export function buildScenePreviousSceneReferenceLine(position: number): string {
-  return `Image ${position}: previous scene — keep only lighting, color grading and outfits; do not copy pose or composition.`;
+  return `Изображение ${position}: предыдущая сцена — сохрани только освещение, цветокоррекцию и одежду; не копируй позу и композицию.`;
 }
 
 export const SCENE_CHARACTER_SHEET_FRAME_NOTE =
-  "Character reference images are character sheets (one character from several angles and with different facial expressions on a neutral background): use them only to keep the characters' appearance consistent. The result must be ONE single, cohesive scene frame, not a grid, collage or multi-panel sheet; do not copy the panel layout or the neutral sheet background.";
+  'Референсы персонажей — это мастер-листы (один персонаж с нескольких ракурсов и с разной мимикой на нейтральном фоне): используй их только для сохранения внешности персонажей. Результат должен быть ОДНИМ цельным кадром сцены, а не сеткой, коллажем или многопанельным листом; не копируй раскладку панелей и нейтральный фон листа.';
 
 export function buildSceneAspectRatioHint(
   aspectRatio: VideoAspectRatio,
 ): string {
-  return `Compose the shot for a ${aspectRatio} aspect ratio frame: the composition must fill this frame.`;
+  return `Скомпонуй кадр под соотношение сторон ${aspectRatio}: композиция должна заполнять весь кадр.`;
 }
 
 export function buildSceneLine(scenario: string): string {
-  return `Scene: ${scenario}`;
+  return `Сцена: ${scenario}`;
 }
 
 export function buildVideoPromptFallback(scenario: string): string {
-  return `<IMAGE_1> comes to life: ${scenario}`;
+  return `<IMAGE_1> оживает: ${scenario} ${SCENE_VIDEO_NO_SPEECH_RULE} ${SCENE_VIDEO_STATIC_CAMERA_RULE}`;
 }

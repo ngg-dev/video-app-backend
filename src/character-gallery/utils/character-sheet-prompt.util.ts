@@ -21,7 +21,9 @@ export function buildCharacterSheetPrompt({
   characterBlock,
 }: CharacterSheetStyle & { characterBlock: string }): string {
   const styleClause = style
-    ? [`Art style: ${style}.`, styleDescription].filter(Boolean).join(' ')
+    ? [`Художественный стиль: ${style}.`, styleDescription]
+        .filter(Boolean)
+        .join(' ')
     : '';
 
   const slots: Record<string, string> = {

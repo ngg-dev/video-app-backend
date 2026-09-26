@@ -12,6 +12,7 @@ import {
   buildSceneVideoCharactersHint,
   buildVideoPromptFallback,
 } from './constants/scene-prompt.constant';
+import { stripCameraDirections } from './utils/scenario.util';
 import { buildSceneReferenceBlock } from './utils/scene-reference.util';
 import { BuildScenePromptParams } from './types/create-video.types';
 
@@ -61,12 +62,13 @@ export class CreateVideoPromptService {
     characterNames: string[],
   ): Promise<string> {
     const charactersHint = buildSceneVideoCharactersHint(characterNames);
+    const videoScenario = stripCameraDirections(scenario);
 
     const instruction = [
       ...SCENE_VIDEO_PROMPT_INSTRUCTIONS,
       charactersHint,
       '',
-      buildSceneLine(scenario),
+      buildSceneLine(videoScenario),
     ]
       .filter(Boolean)
       .join('\n');
@@ -75,6 +77,6 @@ export class CreateVideoPromptService {
       prompt: instruction,
     });
 
-    return generatedPrompt || buildVideoPromptFallback(scenario);
+    return generatedPrompt || buildVideoPromptFallback(videoScenario);
   }
 }

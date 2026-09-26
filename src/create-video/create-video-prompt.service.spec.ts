@@ -8,6 +8,8 @@ import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,
   SCENE_VIDEO_PROMPT_INSTRUCTIONS,
+  SCENE_VIDEO_NO_SPEECH_RULE,
+  SCENE_VIDEO_STATIC_CAMERA_RULE,
   buildSceneImageCharactersHint,
   buildSceneVideoCharactersHint,
   buildSceneStyleHint,
@@ -87,7 +89,7 @@ describe('CreateVideoPromptService', () => {
     );
     expect(prompt).not.toContain('\n\n');
     const lines = prompt.split('\n');
-    expect(lines[lines.length - 1]).toBe('Scene: a hero walks');
+    expect(lines[lines.length - 1]).toBe('Сцена: a hero walks');
   });
 
   it('returns the DeepSeek text when it is non-empty, with a style suffix', async () => {
@@ -202,12 +204,13 @@ describe('CreateVideoPromptService', () => {
 
     // Assert
     expect(imagePrompt).toContain(
-      'keep their appearance consistent with the reference images',
+      'сохраняй их внешность согласованной с референсами',
     );
-    expect(imagePrompt).not.toContain('keep their appearance unchanged');
-    expect(videoPrompt).toContain('keep their appearance unchanged');
+    expect(imagePrompt).not.toContain('сохраняй их внешность неизменной');
+    expect(videoPrompt).not.toContain('сохраняй их внешность согласованной');
+    expect(videoPrompt).toContain('Персонажи в сцене: ');
     expect(videoPrompt).not.toContain(
-      'keep their appearance consistent with the reference images',
+      'сохраняй их внешность согласованной с референсами',
     );
   });
 
@@ -236,7 +239,7 @@ describe('CreateVideoPromptService', () => {
     expect(result).toContain(description);
   });
 
-  it('falls back to "<IMAGE_1> comes to life: <scenario>" when DeepSeek returns an empty response', async () => {
+  it('falls back to "<IMAGE_1> оживает: <scenario>" when DeepSeek returns an empty response', async () => {
     // Arrange
     deepSeekMock.generate.mockResolvedValue('');
 
@@ -244,7 +247,26 @@ describe('CreateVideoPromptService', () => {
     const result = await service.buildVideoPrompt('a hero walks', []);
 
     // Assert
-    expect(result).toBe('<IMAGE_1> comes to life: a hero walks');
+    expect(result).toBe(
+      `<IMAGE_1> оживает: a hero walks ${SCENE_VIDEO_NO_SPEECH_RULE} ${SCENE_VIDEO_STATIC_CAMERA_RULE}`,
+    );
+  });
+
+  it('strips camera directions from the scenario for the video prompt only', async () => {
+    // Arrange
+    const scenario = 'Действие: герой идёт\nКамера: средний план, наезд';
+    deepSeekMock.generate.mockResolvedValue('');
+
+    // Act
+    const result = await service.buildVideoPrompt(scenario, []);
+    const [{ prompt }] = deepSeekMock.generate.mock.calls[0] as [
+      { prompt: string },
+    ];
+
+    // Assert
+    expect(prompt).toContain('Действие: герой идёт');
+    expect(prompt).not.toContain('наезд');
+    expect(result).not.toContain('наезд');
   });
 
   // 18. Reference block at the beginning
@@ -292,7 +314,7 @@ describe('CreateVideoPromptService', () => {
     // Assert
     const styleTag = buildSceneStyleTag('noir');
     expect(result).toBe(`Generated text ${styleTag}`);
-    expect(result).not.toContain('Image 1');
+    expect(result).not.toContain('Изображение 1');
   });
 
   // 20. Reference block does not go to DeepSeek instruction
@@ -318,7 +340,7 @@ describe('CreateVideoPromptService', () => {
     const [{ prompt }] = deepSeekMock.generate.mock.calls[0] as [
       { prompt: string },
     ];
-    expect(prompt).not.toContain('Image 1');
+    expect(prompt).not.toContain('Изображение 1');
     expect(prompt).not.toContain(SCENE_CHARACTER_SHEET_FRAME_NOTE);
   });
 

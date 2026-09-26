@@ -127,6 +127,6 @@ describe('ScenarioPlanPromptService', () => {
     expect(secondPrompt).toContain(
       'заявлен говорящий Аня, но его нет в тексте',
     );
-    expect(secondPrompt).toContain('previous response was invalid');
+    expect(secondPrompt).toContain('Предыдущий ответ был некорректным');
   });
 });

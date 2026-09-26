@@ -1,5 +1,5 @@
 export const VIDEO_STYLE_ANCHOR_SHEET_NOTE =
-  'The reference images are multi-panel character sheets (several angles and facial expressions of one character); the result must be ONE single group frame, not a grid of panels, and must not copy the sheet layout.';
+  'Референсы — это многопанельные мастер-листы персонажей (несколько ракурсов и выражений лица одного персонажа); результат должен быть ОДНИМ общим кадром, а не сеткой панелей, и не должен копировать раскладку листа.';
 
 export function buildVideoStyleAnchorPrompt(
   style: string,
@@ -7,5 +7,5 @@ export function buildVideoStyleAnchorPrompt(
 ): string {
   const descriptionClause = styleDescription ? ` ${styleDescription}` : '';
 
-  return `Group portrait of all the characters shown in the reference images, standing together in a single frame. Visual style: ${style}.${descriptionClause} Keep every character's design, proportions, outfit, and colors faithful to their reference image, rendered in this exact visual style. ${VIDEO_STYLE_ANCHOR_SHEET_NOTE} Plain neutral background, even studio lighting, no text or labels.`;
+  return `Групповой портрет всех персонажей с референсных изображений, стоящих вместе в одном кадре. Визуальный стиль: ${style}.${descriptionClause} Сохраняй дизайн, пропорции, одежду и цвета каждого персонажа верными его референсу, отрисовывая их строго в этом визуальном стиле. ${VIDEO_STYLE_ANCHOR_SHEET_NOTE} Простой нейтральный фон, ровное студийное освещение, без текста и подписей.`;
 }

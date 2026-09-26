@@ -121,7 +121,7 @@ describe('character-sheet-prompt.util', () => {
       });
 
       // Assert
-      expect(result).not.toContain('Art style');
+      expect(result).not.toContain('Художественный стиль');
       expect(result).not.toContain('null');
       expect(result).not.toContain('undefined');
       expect(result).not.toMatch(/ {2}/); // no double spaces

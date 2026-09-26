@@ -28,8 +28,12 @@ describe('buildSceneStyleTag, buildSceneStyleHint', () => {
       const result2 = buildSceneStyleTag(style);
 
       // Assert
-      expect(result1).toBe('Visual style: noir. Keep this exact visual style.');
-      expect(result2).toBe('Visual style: noir. Keep this exact visual style.');
+      expect(result1).toBe(
+        'Визуальный стиль: noir. Строго сохраняй этот визуальный стиль.',
+      );
+      expect(result2).toBe(
+        'Визуальный стиль: noir. Строго сохраняй этот визуальный стиль.',
+      );
       expect(result1).toBe(result2);
     });
   });
@@ -57,7 +61,7 @@ describe('buildSceneStyleTag, buildSceneStyleHint', () => {
 
       // Assert
       expect(result).toBe(
-        'Render the image in the following visual style: noir.',
+        'Оформи изображение в следующем визуальном стиле: noir.',
       );
     });
   });
@@ -73,7 +77,7 @@ describe('buildSceneStyleTag, buildSceneStyleHint', () => {
 
       // Assert
       expect(result).toBe(
-        'Image 2: character — keep face, hair, body, outfit exactly.',
+        'Изображение 2: персонаж — точно сохраняй лицо, волосы, телосложение, одежду.',
       );
     });
   });

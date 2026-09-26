@@ -17,6 +17,7 @@ import {
   buildSceneReferences,
   limitSceneReferences,
 } from './utils/scene-reference.util';
+import { DEFAULT_VIDEO_RESOLUTION } from 'src/shared/constants/create-video';
 import { SCENE_REFERENCE_LIMIT } from './constants/scene-reference.constant';
 import { DEFAULT_VIDEO_ASPECT_RATIO } from 'src/shared/constants/video-aspect-ratio';
 import { DEFAULT_VIDEO_DURATION_SECONDS } from 'src/shared/constants/video-duration';
@@ -151,7 +152,7 @@ export class CreateVideoService {
     const sceneVideo = await this.xaiService.generateVideo({
       prompt: videoPrompt,
       referenceImageUrls: [sceneImageUrl],
-      resolution: '720p',
+      resolution: DEFAULT_VIDEO_RESOLUTION,
       duration,
     });
 

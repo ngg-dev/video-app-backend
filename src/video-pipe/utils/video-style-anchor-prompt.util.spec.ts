@@ -15,8 +15,8 @@ describe('buildVideoStyleAnchorPrompt', () => {
     // Assert
     expect(result).toContain('noir');
     expect(result).toContain(description);
-    expect(result).toMatch(/group/i);
-    expect(result).toMatch(/neutral/i);
+    expect(result).toMatch(/групп/i);
+    expect(result).toMatch(/нейтральн/i);
   });
 
   it('does not contain null or undefined string representations without description', () => {
