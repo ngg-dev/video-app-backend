@@ -34,6 +34,7 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^12.0.1",
+    "@runware/sdk": "^1.6.10",
     "ai": "^7.0.99",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

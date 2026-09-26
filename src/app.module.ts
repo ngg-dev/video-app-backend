@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { RedisModule } from './database/redis/redis.module';
 import { XaiModule } from './ai-providers/xai/xai.module';
+import { RunwareModule } from './ai-providers/runware/runware.module';
 import { CreateVideoModule } from './create-video/create-video.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { CharacterGalleryModule } from './character-gallery/character-gallery.module';
@@ -34,6 +35,7 @@ import { ScenarioPlanModule } from './scenario-plan/scenario-plan.module';
     DeepSeekModule,
     RedisModule,
     XaiModule,
+    RunwareModule,
     CreateVideoModule,
     CharacterGalleryModule,
     StorageModule,
