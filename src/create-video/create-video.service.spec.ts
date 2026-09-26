@@ -8,18 +8,18 @@ jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
 
-jest.mock('src/ai-providers/deepseek/deepseek.service', () => ({
+jest.mock('@ai-providers/deepseek/services/deepseek.service', () => ({
   DeepSeekService: jest.fn(),
 }));
 
-jest.mock('src/ai-providers/xai/xai.service', () => ({
+jest.mock('@ai-providers/xai/services/xai.service', () => ({
   XaiService: jest.fn(),
 }));
 
 import { CreateVideoService } from './create-video.service';
 import type { CreateRequestDto } from './dto/create-video.dto';
-import type { XaiService } from 'src/ai-providers/xai/xai.service';
-import type { StorageService } from 'src/storage/storage.service';
+import type { XaiService } from '@ai-providers/xai/services/xai.service';
+import type { StorageService } from '@storage/services/storage.service';
 import type { CreateVideoCacheService } from './create-video-cache.service';
 import type { CreateVideoPromptService } from './create-video-prompt.service';
 import type { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';

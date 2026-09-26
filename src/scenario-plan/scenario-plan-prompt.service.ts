@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DeepSeekService } from 'src/ai-providers/deepseek/deepseek.service';
+import { DeepSeekService } from '@ai-providers/deepseek/services/deepseek.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { CharacterItemEntity } from 'src/character-gallery/entities/character-item.entity';
 import {

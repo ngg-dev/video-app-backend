@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { XaiService } from 'src/ai-providers/xai/xai.service';
-import { StorageService } from 'src/storage/storage.service';
+import { XaiService } from '@ai-providers/xai/services/xai.service';
+import { StorageService } from '@storage/services/storage.service';
 import {
   buildCharacterBlock,
   buildCharacterSheetPrompt,

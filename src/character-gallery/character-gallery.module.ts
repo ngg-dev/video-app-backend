@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { XaiModule } from 'src/ai-providers/xai/xai.module';
-import { StorageModule } from 'src/storage/storage.module';
+import { XaiModule } from '@ai-providers/xai/xai.module';
+import { StorageModule } from '@storage/storage.module';
 import { CharacterGalleryController } from './character-gallery.controller';
 import { CharacterGalleryService } from './character-gallery.service';
 import { CharacterCollectionReaderService } from './character-collection-reader.service';

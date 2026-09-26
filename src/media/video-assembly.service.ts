@@ -3,7 +3,7 @@ import { join } from 'path';
 import { readFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { MediaService } from 'src/media/media.service';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from '@storage/services/storage.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { downloadBinaryToPath, withTempDir } from 'src/shared/utils';

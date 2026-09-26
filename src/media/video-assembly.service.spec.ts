@@ -17,7 +17,7 @@ jest.mock('fs/promises', () => ({
 import { mkdir, rm } from 'fs/promises';
 import { VideoAssemblyService } from './video-assembly.service';
 import type { MediaService } from './media.service';
-import type { StorageService } from 'src/storage/storage.service';
+import type { StorageService } from '@storage/services/storage.service';
 import type { AppLoggerService } from 'src/shared/logger/logger.service';
 import { downloadBinaryToPath } from 'src/shared/utils';
 

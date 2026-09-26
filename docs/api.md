@@ -3,14 +3,14 @@
 Глобально включён `ValidationPipe({ whitelist: true, transform: true })` — лишние поля в
 теле запроса отбрасываются, DTO валидируются `class-validator`.
 
-## `deepseek` (`src/ai-providers/deepseek`)
+## `deepseek` (`src/infrastructure/ai-providers/deepseek`)
 
 ### `POST /deepseek/generate`
 
 Тело: `{ prompt: string }`
 Ответ: `{ message: string }`
 
-## `xai` (`src/ai-providers/xai`)
+## `xai` (`src/infrastructure/ai-providers/xai`)
 
 ### `POST /xai/text/generate`
 
@@ -110,7 +110,7 @@
 Тело: `{ inputUrls: string[] }`
 Ответ: `{ url: string, key: string }`
 
-## `storage` (`src/storage`)
+## `storage` (`src/infrastructure/storage`)
 
 ### `POST /storage/upload`
 

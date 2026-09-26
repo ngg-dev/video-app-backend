@@ -5,8 +5,8 @@ import { VideoStyleAnchorService } from './video-style-anchor.service';
 import { CreateVideoModule } from 'src/create-video/create-video.module';
 import { MediaModule } from 'src/media/media.module';
 import { CharacterGalleryModule } from 'src/character-gallery/character-gallery.module';
-import { XaiModule } from 'src/ai-providers/xai/xai.module';
-import { StorageModule } from 'src/storage/storage.module';
+import { XaiModule } from '@ai-providers/xai/xai.module';
+import { StorageModule } from '@storage/storage.module';
 
 @Module({
   imports: [

@@ -79,7 +79,11 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1"
+      "^src/(.*)$": "<rootDir>/$1",
+      "^@infrastructure/(.*)$": "<rootDir>/infrastructure/$1",
+      "^@ai-providers/(.*)$": "<rootDir>/infrastructure/ai-providers/$1",
+      "^@storage/(.*)$": "<rootDir>/infrastructure/storage/$1",
+      "^@database/(.*)$": "<rootDir>/infrastructure/database/$1"
     },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

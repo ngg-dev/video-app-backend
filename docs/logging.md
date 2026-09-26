@@ -99,7 +99,7 @@
 2. Любой новый исходящий вызов (к БД-клиенту, внешнему API, кэшу и т. п.) обернуть в
    `AppLoggerService.trackExternalCall({ provider, operation, request }, () => fn(), mapResponse?)`.
 
-Пример — `DeepSeekService.generate` (`src/ai-providers/deepseek/deepseek.service.ts`): класс помечен
+Пример — `DeepSeekService.generate` (`src/infrastructure/ai-providers/deepseek/services/deepseek.service.ts`): класс помечен
 `@LogMethods()`, а сам вызов `generateText` обёрнут в `this.logger.trackExternalCall({ provider: 'deepseek',
 operation: 'generateText', request: { model, promptLength, prompt } }, () => generateText(...), (response) =>
 ({ finishReason, usage, textLength }))`.

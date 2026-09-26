@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { DeepSeekModule } from 'src/ai-providers/deepseek/deepseek.module';
+import { DeepSeekModule } from '@ai-providers/deepseek/deepseek.module';
 import { CharacterGalleryModule } from 'src/character-gallery/character-gallery.module';
 import { ScenarioPlanController } from './scenario-plan.controller';
 import { ScenarioPlanService } from './scenario-plan.service';

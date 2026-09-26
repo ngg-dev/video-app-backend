@@ -6,7 +6,7 @@ jest.mock('src/create-video/create-video.service', () => ({
   CreateVideoService: jest.fn(),
 }));
 
-jest.mock('src/ai-providers/xai/xai.service', () => ({
+jest.mock('@ai-providers/xai/services/xai.service', () => ({
   XaiService: jest.fn(),
 }));
 

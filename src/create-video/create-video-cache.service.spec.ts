@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { CreateVideoCacheService } from './create-video-cache.service';
-import { RedisService } from 'src/database/redis/redis.service';
+import { RedisService } from '@database/redis/services/redis.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { CREATE_VIDEO_URL_KEY_PREFIX } from './constants/video-url-storage.constant';
 

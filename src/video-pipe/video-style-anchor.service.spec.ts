@@ -1,15 +1,15 @@
-jest.mock('src/ai-providers/xai/xai.service', () => ({
+jest.mock('@ai-providers/xai/services/xai.service', () => ({
   XaiService: jest.fn(),
 }));
 
-jest.mock('src/storage/storage.service', () => ({
+jest.mock('@storage/services/storage.service', () => ({
   StorageService: jest.fn(),
 }));
 
 import { InternalServerErrorException } from '@nestjs/common';
 import { VideoStyleAnchorService } from './video-style-anchor.service';
-import type { XaiService } from 'src/ai-providers/xai/xai.service';
-import type { StorageService } from 'src/storage/storage.service';
+import type { XaiService } from '@ai-providers/xai/services/xai.service';
+import type { StorageService } from '@storage/services/storage.service';
 import { VIDEO_STYLE_ANCHOR_KEY_PREFIX } from './constants/video-pipe.constant';
 import { buildVideoStyleAnchorPrompt } from './utils/video-style-anchor-prompt.util';
 

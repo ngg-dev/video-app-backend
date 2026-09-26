@@ -6,10 +6,10 @@
 
 ## 1. `ioredis` не объявлен в `package.json`, но используется — главная проблема
 
-**Что.** `src/database/redis/redis.service.ts` делает `import Redis from 'ioredis'` и `RedisService extends
+**Что.** `src/infrastructure/database/redis/services/redis.service.ts` делает `import Redis from 'ioredis'` и `RedisService extends
 Redis`, при этом `ioredis` отсутствует и в `dependencies`, и в `devDependencies` `package.json`.
 
-**Где.** `src/database/redis/redis.service.ts`, `package.json`.
+**Где.** `src/infrastructure/database/redis/services/redis.service.ts`, `package.json`.
 
 **Последствие.** Локально `npm run typecheck` может проходить только если `ioredis` случайно резолвится из
 внешнего (например, домашнего) `node_modules` разработчика. На чистой машине и в Docker-сборке (`npm ci`
@@ -32,8 +32,7 @@ Redis`, при этом `ioredis` отсутствует и в `dependencies`, �
 `service-split-and-cleanup`), `AppModule` вообще не импортирует ни одного generation-модуля.
 `npm run typecheck` проходит.
 
-**Статус.** Устаревшая пометка, а не живая проблема; сам `AGENTS.md` в этой задаче не редактируется (правка
-вне рамок — см. `PLAN-service-split-and-cleanup.md`).
+**Статус.** Закрыто: пометка удалена из `AGENTS.md`.
 
 ## 3. `npm run test:e2e` не работает
 
@@ -52,8 +51,8 @@ format` и `npm run lint` тоже включают маску `test/**/*.ts` в
 **Что.** В коде есть несколько опечаток в публичных именах:
 
 - `creaate` (`src/create-video/create-video.controller.ts`) — имя метода контроллера;
-- `gerenatete` и `GenerateResponsetDto` (`src/ai-providers/deepseek/deepseek.controller.ts`,
-  `src/ai-providers/deepseek/dto/deepseek.dto.ts`) — имя метода контроллера и DTO;
+- `gerenatete` и `GenerateResponsetDto` (`src/infrastructure/ai-providers/deepseek/controllers/deepseek.controller.ts`,
+  `src/infrastructure/ai-providers/deepseek/dto/deepseek.dto.ts`) — имя метода контроллера и DTO;
 
 **Где.** См. пути выше.
 
@@ -80,7 +79,7 @@ format` и `npm run lint` тоже включают маску `test/**/*.ts` в
 `providerMetadata.xai.videoUrl` — это ссылка самого провайдера xAI, а не файл в S3-совместимом хранилище
 приложения.
 
-**Где.** `src/create-video/create-video.service.ts`, `src/ai-providers/xai/xai.service.ts`.
+**Где.** `src/create-video/create-video.service.ts`, `src/infrastructure/ai-providers/xai/services/xai.service.ts`.
 
 **Последствие.** Срок жизни ссылки определяет провайдер, а не приложение. Redis хранит только эту ссылку с
 TTL `3600` секунд (`CREATE_VIDEO_URL_TTL_SECONDS`), что соответствует терминам «Ссылка провайдера на
@@ -110,7 +109,7 @@ collectionId)` с префиксом `create-video:video-url:`. При ошиб�
 `xai` из `@ai-sdk/xai`, а не сконфигурированный ключом `this.xaiSource` (`createXai({ apiKey: XAI_API_KEY
 })`).
 
-**Где.** `src/ai-providers/xai/xai.service.ts`, метод `generateImage`.
+**Где.** `src/infrastructure/ai-providers/xai/services/xai.service.ts`, метод `generateImage`.
 
 **Последствие.** `XAI_API_KEY` для генерации изображений фактически берётся синглтоном `xai` из переменной
 окружения напрямую (поведение самого SDK `@ai-sdk/xai`), а не из `src/shared/constants/config.ts`, как для

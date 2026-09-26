@@ -1,12 +1,20 @@
 # Архитектура
 
+## Слой `src/infrastructure`
+
+Адаптеры внешних систем: `ai-providers/{deepseek,xai,runware}`, `storage`, `database/redis`. Структура модуля:
+`*.module.ts` в корне, подпапки `controllers/`, `services/`, `dto/`, `types/`, `utils/`, `constants/`, спеки в
+`__tests__/`. Алиасы (tsconfig `paths` + jest `moduleNameMapper`): `@ai-providers/*`, `@storage/*`,
+`@database/*`, `@infrastructure/*` (для будущих групп). Потребители вне модуля импортируют через алиас
+группы, внутри модуля — относительные пути; инфраструктура не импортирует домен.
+
 ## Стек
 
 - **NestJS 11** (Express) — HTTP API, DI.
 - **TypeORM 0.3 + Postgres** — персистентность (`character-gallery`). `TypeOrmModule.forRoot`
   в `src/app.module.ts` читает `DATABASE_*` из окружения, `autoLoadEntities: true`,
   `synchronize` включён везде кроме `NODE_ENV=production`.
-- **ioredis** (`src/database/redis/`) — кэш результатов генерации сцен.
+- **ioredis** (`src/infrastructure/database/redis/`) — кэш результатов генерации сцен.
 - **Vercel AI SDK (`ai`)** + `@ai-sdk/deepseek`, `@ai-sdk/xai` — обёртки над LLM/image/video
   провайдерами (DeepSeek, xAI Grok).
 - **fluent** ffmpeg-обвязка (`src/media/ffmpeg`) — сборка видео из сгенерированных клипов.

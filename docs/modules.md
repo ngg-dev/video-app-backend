@@ -1,6 +1,8 @@
 # Модули
 
-## `src/ai-providers/deepseek`
+Инфраструктурные модули лежат в `src/infrastructure/` (алиасы `@ai-providers/*`, `@storage/*`, `@database/*`), см. `docs/architecture.md`.
+
+## `src/infrastructure/ai-providers/deepseek`
 
 Обёртка над DeepSeek через Vercel AI SDK (`@ai-sdk/deepseek`, `generateText`).
 
@@ -11,7 +13,7 @@
 - API-ключ: `DEEPSEEK_API_KEY` (`src/shared/constants/config.ts`).
 - `DeepSeekController` — `POST /deepseek/generate`.
 
-## `src/ai-providers/xai`
+## `src/infrastructure/ai-providers/xai`
 
 Обёртка над xAI (Grok) — текст, изображения, видео.
 
@@ -22,7 +24,7 @@
   `referenceImageUrls`, `resolution`, `duration`; возвращает `{ video, videoUrl }`
   (`videoUrl` — из `providerMetadata.xai.videoUrl`).
 - Модели: `src/shared/constants/xai.ts`. API-ключ: `XAI_API_KEY`.
-- Билдеры опций запроса — `src/ai-providers/xai/utils/xai-request-builders.util.ts`.
+- Билдеры опций запроса — `src/infrastructure/ai-providers/xai/utils/xai-request-builders.util.ts`.
 - Контроллеры: `XaiTextController` (`POST /xai/text/generate`),
   `XaiImageController` (`POST /xai/image/generate`).
 
@@ -116,7 +118,7 @@
 - Контроллер: `MediaController` — `POST /media/trim-to-shorts`, `POST /media/concat`,
   `POST /media/concat-and-get-url`, `POST /media/concat-normalized-vertical`.
 
-## `src/storage`
+## `src/infrastructure/storage`
 
 Загрузка/удаление файлов в S3-совместимое хранилище (по умолчанию Yandex Object Storage).
 
@@ -130,7 +132,7 @@
 - Контроллер: `StorageController` — `POST /storage/upload` (multipart, поле `file`,
   опциональный query `prefix`).
 
-## `src/database/redis`
+## `src/infrastructure/database/redis`
 
 `RedisService extends Redis` (ioredis) — простой DI-обёртка, конфиг из `REDIS_HOST`/
 `REDIS_PORT`. Используется `CreateVideoCacheService`.

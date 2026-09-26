@@ -1,8 +1,8 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { XaiService } from 'src/ai-providers/xai/xai.service';
+import { XaiService } from '@ai-providers/xai/services/xai.service';
 import { CharacterCollectionItemEntity } from 'src/character-gallery/entities/character-item.entity';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from '@storage/services/storage.service';
 import { VIDEO_STYLE_ANCHOR_KEY_PREFIX } from './constants/video-pipe.constant';
 import { buildVideoStyleAnchorPrompt } from './utils/video-style-anchor-prompt.util';
 

@@ -1,9 +1,9 @@
-jest.mock('src/ai-providers/deepseek/deepseek.service', () => ({
+jest.mock('@ai-providers/deepseek/services/deepseek.service', () => ({
   DeepSeekService: jest.fn(),
 }));
 
 import { ScenarioPlanPromptService } from './scenario-plan-prompt.service';
-import type { DeepSeekService } from 'src/ai-providers/deepseek/deepseek.service';
+import type { DeepSeekService } from '@ai-providers/deepseek/services/deepseek.service';
 import { CharacterItemEntity } from 'src/character-gallery/entities/character-item.entity';
 import { SCENARIO_PLAN_INSTRUCTIONS } from './constants/scenario-plan.constant';
 

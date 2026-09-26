@@ -15,7 +15,11 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "src/*": ["src/*"]
+      "src/*": ["src/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@ai-providers/*": ["src/infrastructure/ai-providers/*"],
+      "@storage/*": ["src/infrastructure/storage/*"],
+      "@database/*": ["src/infrastructure/database/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

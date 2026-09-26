@@ -16,11 +16,18 @@ Scaffolds a standard Nest feature module under `src/<feature>/` (or
 ## Steps
 
 1. **Get the feature name** from the user (e.g. `create-video`,
-   `generation-item`). Derive:
+   `scenario-plan`). Derive:
    - `kebab-case` for the directory and file names
    - `PascalCase` for class names (`FooBarModule`, `FooBarController`, `FooBarService`)
    - If the user names a parent domain (e.g. "generations"), nest it:
      `src/<domain>/<feature>/`. Otherwise scaffold directly under `src/<feature>/`.
+
+1a. **Adapters for external systems** (AI providers, storage, databases) go in
+   `src/infrastructure/<group>/<name>/` with `*.module.ts` at the root and
+   `controllers/`, `services/`, `dto/`, `types/`, `utils/`, `constants/` subfolders; specs live
+   only in `__tests__/`. Consumers import them via the group alias (`@ai-providers/*`,
+   `@storage/*`, `@database/*`). A new group needs a new alias in both `tsconfig.json` `paths`
+   and jest `moduleNameMapper` (package.json). Domain features stay in `src/<feature>/` as below.
 
 2. **Check for collisions**: if `src/<path>/<feature>.module.ts` already
    exists, stop and ask before overwriting.
@@ -30,7 +37,7 @@ Scaffolds a standard Nest feature module under `src/<feature>/` (or
 4. **Wire into `src/app.module.ts`**:
    - Add an import statement for the new module (path relative from `src/`,
      matching the relative-import style already used in `app.module.ts` for
-     other feature modules, e.g. `./generations/generation-item/generation-item.module`).
+     other feature modules, e.g. `./scenario-plan/scenario-plan.module`).
    - Add the module class to the `imports: [...]` array, following the
      existing entries' order/grouping (feature modules are listed after infra
      modules like `TypeOrmModule`/`RedisModule`).
@@ -86,7 +93,7 @@ export class FeatureService {}
   add them; otherwise leave the class shells empty for the user to fill in.
 - Add a `dto/` or `entities/` subdirectory only if the user's request implies
   one (e.g. they describe a request body or a persisted entity) — see
-  `src/create-video/dto/` and `src/generations/generation-item/entities/` for
+  `src/create-video/dto/` and `src/character-gallery/entities/` for
   the existing conventions.
 - If the module needs another module's provider (e.g. `DeepSeekModule`), add
   it to `imports: []` in the new module and to the constructor of whichever

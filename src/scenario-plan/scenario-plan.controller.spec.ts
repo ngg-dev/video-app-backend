@@ -2,7 +2,7 @@ jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
 
-jest.mock('src/ai-providers/deepseek/deepseek.service', () => ({
+jest.mock('@ai-providers/deepseek/services/deepseek.service', () => ({
   DeepSeekService: jest.fn(),
 }));
 

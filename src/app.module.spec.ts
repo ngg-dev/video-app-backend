@@ -28,7 +28,7 @@ describe('AppModule generation-item status (branch 11a - deleted)', () => {
       "import { MediaModule } from './media/media.module'",
     );
     expect(appModuleContent).toContain(
-      "import { StorageModule } from './storage/storage.module'",
+      "import { StorageModule } from '@storage/storage.module'",
     );
   });
 });
@@ -44,5 +44,30 @@ describe('AppModule scenario-plan registration', () => {
       "import { ScenarioPlanModule } from './scenario-plan/scenario-plan.module'",
     );
     expect(appModuleContent).toContain('ScenarioPlanModule');
+  });
+});
+
+describe('AppModule infrastructure modules via aliases', () => {
+  it('all infrastructure modules are imported through aliases', () => {
+    // Arrange
+    const appModulePath = join(__dirname, 'app.module.ts');
+    const appModuleContent = readFileSync(appModulePath, 'utf-8');
+
+    // Act & Assert
+    expect(appModuleContent).toContain(
+      "import { DeepSeekModule } from '@ai-providers/deepseek/deepseek.module'",
+    );
+    expect(appModuleContent).toContain(
+      "import { XaiModule } from '@ai-providers/xai/xai.module'",
+    );
+    expect(appModuleContent).toContain(
+      "import { RunwareModule } from '@ai-providers/runware/runware.module'",
+    );
+    expect(appModuleContent).toContain(
+      "import { RedisModule } from '@database/redis/redis.module'",
+    );
+    expect(appModuleContent).not.toContain("'./ai-providers/");
+    expect(appModuleContent).not.toContain("'./storage/");
+    expect(appModuleContent).not.toContain("'./database/");
   });
 });

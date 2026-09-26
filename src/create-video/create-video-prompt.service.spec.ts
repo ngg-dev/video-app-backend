@@ -1,9 +1,9 @@
-jest.mock('src/ai-providers/deepseek/deepseek.service', () => ({
+jest.mock('@ai-providers/deepseek/services/deepseek.service', () => ({
   DeepSeekService: jest.fn(),
 }));
 
 import { CreateVideoPromptService } from './create-video-prompt.service';
-import type { DeepSeekService } from 'src/ai-providers/deepseek/deepseek.service';
+import type { DeepSeekService } from '@ai-providers/deepseek/services/deepseek.service';
 import { VideoAspectRatio } from 'src/shared/constants/video-aspect-ratio';
 import {
   SCENE_IMAGE_PROMPT_INSTRUCTIONS,

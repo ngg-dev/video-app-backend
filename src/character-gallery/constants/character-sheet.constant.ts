@@ -1,7 +1,7 @@
 import type {
   AspectRatio,
   XaiImageResolution,
-} from 'src/ai-providers/xai/types/xai.types';
+} from '@ai-providers/xai/types/xai.types';
 import type { CharacterAppearance } from '../types/character-appearance.types';
 
 export const CHARACTER_APPEARANCE_FIELD_MAX_LENGTH = 1000;

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { RedisService } from 'src/database/redis/redis.service';
+import { RedisService } from '@database/redis/services/redis.service';
 import { AppLoggerService } from 'src/shared/logger/logger.service';
 import { LogMethods } from 'src/shared/logger/log-methods.decorator';
 import { sanitizeForLog } from 'src/shared/logger/sanitize';

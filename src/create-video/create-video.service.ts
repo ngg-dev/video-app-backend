@@ -3,8 +3,8 @@ import {
   CreateRequestDto,
   CreateVideoResponseDto,
 } from './dto/create-video.dto';
-import { XaiService } from 'src/ai-providers/xai/xai.service';
-import { StorageService } from 'src/storage/storage.service';
+import { XaiService } from '@ai-providers/xai/services/xai.service';
+import { StorageService } from '@storage/services/storage.service';
 import { CharacterCollectionReaderService } from 'src/character-gallery/character-collection-reader.service';
 import {
   assertCollectionHasStyle,
